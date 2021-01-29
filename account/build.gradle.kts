@@ -25,7 +25,9 @@ dependencies {
     val kotestVersion = "4.4.0.RC2"
     val springmockkVersion = "3.0.1"
 
-    implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
+
     implementation("org.springframework.boot:spring-boot-starter-rsocket")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
@@ -34,7 +36,6 @@ dependencies {
         exclude(module = "mockito-core")
     }
     testImplementation("io.projectreactor:reactor-test")
-    testImplementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     testImplementation("com.ninja-squad:springmockk:$springmockkVersion")
     testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core-jvm:$kotestVersion")

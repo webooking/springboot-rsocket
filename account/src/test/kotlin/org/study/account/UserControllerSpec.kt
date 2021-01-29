@@ -3,10 +3,15 @@ package org.study.account
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.data.forAll
 import io.kotest.data.row
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.runBlocking
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.messaging.rsocket.RSocketRequester
+import org.springframework.messaging.rsocket.retrieveAndAwait
 import org.study.account.model.User
 import reactor.kotlin.test.test
+import java.time.Duration
 
 @SpringBootTest
 class UserControllerSpec(val requester: RSocketRequester): StringSpec({
@@ -16,7 +21,9 @@ class UserControllerSpec(val requester: RSocketRequester): StringSpec({
             .data("yuri")
             .retrieveMono(User::class.java)
             .test()
-            .expectNextMatches { it.age == 28 }
+            .expectNextMatches {
+                it.age == 28
+            }
             .expectComplete()
             .verify()
     }
