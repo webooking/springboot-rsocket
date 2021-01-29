@@ -1,6 +1,5 @@
 package org.study.account.controller
 
-import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
@@ -14,9 +13,12 @@ class UserController(val userService: UserService) {
     @MessageMapping("request-response")
     suspend fun requestResponse(name: String): User {
         log.info("Received request-response request: {}", name)
-        val user = userService.findUserByName(name).awaitFirst()
+        return userService.findUserByName(name)
+    }
 
-        log.info("request-response Response: {}", user)
-        return user
+    @MessageMapping("fireAndForget")
+    suspend fun fireAndForget(model: User) {
+        log.info("Received fireAndForget request: {}", model)
+        userService.save(model)
     }
 }

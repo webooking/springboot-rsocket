@@ -1,14 +1,23 @@
 package org.study.account.service
 
-import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.coroutineScope
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.study.account.model.User
-import reactor.core.publisher.Mono
 
 @Service
-class UserService(val users: List<User>) {
+class UserService(val users: MutableList<User>) {
+    private val log = LoggerFactory.getLogger(this::class.java)
 
-    suspend fun findUserByName(name: String): Mono<User> = mono {
-        users.first { it.name == name }
+    suspend fun findUserByName(name: String): User = coroutineScope {
+        val user = users.first { it.name == name }
+
+        log.info("request-response Response: {}", user)
+        user
+    }
+
+    suspend fun save(model: User) = coroutineScope {
+        users.add(model)
+        log.info("after calling the save method, current userList: {}", users)
     }
 }

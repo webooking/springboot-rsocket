@@ -10,9 +10,9 @@ class AccountConfig {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @Bean
-    fun users(): List<User> {
+    fun users(): MutableList<User> {
         log.info("init users")
-        return listOf(
+        return mutableListOf(
             User(name = "peter", age = 18),
             User(name = "yuri", age = 28),
             User(name = "henry", age = 38),

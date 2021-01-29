@@ -14,7 +14,7 @@ import reactor.kotlin.test.test
 import java.time.Duration
 
 @SpringBootTest
-class UserControllerSpec(val requester: RSocketRequester): StringSpec({
+class RequestAndResponseSpec(val requester: RSocketRequester): StringSpec({
     "request-response"{
         requester
             .route("request-response")

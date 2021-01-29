@@ -575,10 +575,7 @@ class UserController(val userService: UserService) {
     @MessageMapping("request-response")
     suspend fun requestResponse(name: String): User {
         log.info("Received request-response request: {}", name)
-        val user = userService.findUserByName(name).awaitFirst()
-
-        log.info("request-response Response: {}", user)
-        return user
+        return userService.findUserByName(name)
     }
 }
 ```
@@ -588,16 +585,20 @@ class UserController(val userService: UserService) {
 ```
 package org.study.account.service
 
-import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.coroutineScope
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.study.account.model.User
-import reactor.core.publisher.Mono
 
 @Service
 class UserService(val users: List<User>) {
+    private val log = LoggerFactory.getLogger(this::class.java)
 
-    suspend fun findUserByName(name: String): Mono<User> = mono {
-        users.first { it.name == name }
+    suspend fun findUserByName(name: String): User = coroutineScope {
+        val user = users.first { it.name == name }
+
+        log.info("request-response Response: {}", user)
+        user
     }
 }
 ```
@@ -605,6 +606,81 @@ class UserService(val users: List<User>) {
 ### 6.4.4 testing
 
 > 继续使用之前写好的测试代码
+
+## 6.5 FireAndForget
+
+### 6.5.1 不可变
+
+在kotlin中，声明的很多对象，属性都是不可变的。与之类似的特性，是`非空对象`
+
+```
+data class User(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val age: Int,
+    val createTime: LocalDateTime = LocalDateTime.now()
+)
+```
+
+### 6.5.2 MutableList
+
+```
+@Bean
+fun users(): MutableList<User> {
+    log.info("init users")
+    return mutableListOf(
+        User(name = "peter", age = 18),
+        User(name = "yuri", age = 28),
+        User(name = "henry", age = 38),
+    )
+}
+```
+
+### 6.5.3 Controller
+
+```
+@MessageMapping("fireAndForget")
+suspend fun fireAndForget(model: User) {
+    log.info("Received fireAndForget request: {}", model)
+    userService.save(model)
+}
+```
+
+### 6.5.4 Service
+
+```
+suspend fun save(model: User) = coroutineScope {
+    users.add(model)
+    log.info("after calling the save method, current userList: {}", users)
+}
+```
+
+### 6.5.5 testing
+
+```
+"fire and forget"{
+    requester
+        .route("fireAndForget")
+        .data(User(name = "frank", age = 34))
+        .retrieveMono(Void::class.java)
+        .test()
+        .expectComplete()
+        .verify()
+
+    requester
+        .route("request-response")
+        .data("frank")
+        .retrieveMono(User::class.java)
+        .test()
+        .expectNextMatches {
+            it.age == 34
+        }
+        .expectComplete()
+        .verify()
+}
+```
+
+
 
 
 
