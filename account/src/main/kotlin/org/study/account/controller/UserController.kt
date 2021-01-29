@@ -1,5 +1,6 @@
 package org.study.account.controller
 
+import kotlinx.coroutines.flow.flow
 import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
@@ -21,4 +22,7 @@ class UserController(val userService: UserService) {
         log.info("Received fireAndForget request: {}", model)
         userService.save(model)
     }
+
+    @MessageMapping("stream")
+    suspend fun stream() = userService.finAllUsers()
 }

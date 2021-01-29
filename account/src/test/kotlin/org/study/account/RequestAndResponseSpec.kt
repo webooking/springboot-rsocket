@@ -21,9 +21,7 @@ class RequestAndResponseSpec(val requester: RSocketRequester): StringSpec({
             .data("yuri")
             .retrieveMono(User::class.java)
             .test()
-            .expectNextMatches {
-                it.age == 28
-            }
+            .expectNextMatches { it.age == 28 }
             .expectComplete()
             .verify()
     }

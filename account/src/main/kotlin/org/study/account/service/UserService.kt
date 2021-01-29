@@ -1,6 +1,8 @@
 package org.study.account.service
 
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.study.account.model.User
@@ -19,5 +21,11 @@ class UserService(val users: MutableList<User>) {
     suspend fun save(model: User) = coroutineScope {
         users.add(model)
         log.info("after calling the save method, current userList: {}", users)
+    }
+
+    suspend fun finAllUsers(): Flow<User> = flow<User> {
+        repeat(20){
+            emit(users.first().copy(age = it))
+        }
     }
 }
