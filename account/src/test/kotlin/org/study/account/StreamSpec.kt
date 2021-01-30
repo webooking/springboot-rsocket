@@ -24,4 +24,28 @@ class StreamSpec(val requester: RSocketRequester) : StringSpec({
             }.expectComplete()
             .verify()
     }
+
+    "read on demand"{
+        requester
+            .route("stream")
+            .retrieveFlux(User::class.java)
+            .buffer(10)
+            .test()
+            .expectNextMatches { list ->
+                println("------------------------")
+                list.size shouldBe 10
+
+                list.withIndex().all {
+                    it.value.age == it.index
+                }
+            }.expectNextMatches { list ->
+                println("========================")
+                list.size shouldBe 10
+
+                list.withIndex().all {
+                    it.value.age == it.index + 10
+                }
+            }.expectComplete()
+            .verify()
+    }
 })

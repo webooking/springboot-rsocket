@@ -25,7 +25,9 @@ class UserService(val users: MutableList<User>) {
 
     suspend fun finAllUsers(): Flow<User> = flow<User> {
         repeat(20){
-            emit(users.first().copy(age = it))
+            val user = users.first().copy(age = it)
+            log.info("find a user from the server, age: $it")
+            emit(user)
         }
     }
 }

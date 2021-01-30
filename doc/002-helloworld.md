@@ -735,6 +735,63 @@ class StreamSpec(val requester: RSocketRequester) : StringSpec({
 })
 ```
 
+## 6.7 Read on demand
+
+思考： 如果client一次读取10条数据，那么
+
+1. server端如何生成数据？一次性生成20条？还是client消费完毕后，才生成？
+2. client如何实现按需读取？
+
+### 6.7.1 server
+
+```
+suspend fun finAllUsers(): Flow<User> = flow<User> {
+    repeat(20){
+        val user = users.first().copy(age = it)
+        log.info("find a user from the server, age: $it")
+        emit(user)
+    }
+}
+```
+
+### 6.7.2 client
+
+```
+"read on demand"{
+    requester
+        .route("stream")
+        .retrieveFlux(User::class.java)
+        .buffer(10)
+        .test()
+        .expectNextMatches { list ->
+        		println("------------------------")
+            list.size shouldBe 10
+
+            list.withIndex().all {
+                it.value.age == it.index
+            }
+        }.expectNextMatches { list ->
+        		println("========================")
+            list.size shouldBe 10
+
+            list.withIndex().all {
+                it.value.age == it.index + 10
+            }
+        }.expectComplete()
+        .verify()
+}
+```
+
+### 6.7.3 Test Results
+
+```
+The server prints 20 log records
+--------------
+==============
+```
+
+## 6.8 Channel
+
 
 
 
