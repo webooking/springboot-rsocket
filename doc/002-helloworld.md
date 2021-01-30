@@ -792,6 +792,83 @@ The server prints 20 log records
 
 ## 6.8 Channel
 
+### 6.8.1 Controller
+
+```
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import org.slf4j.LoggerFactory
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.stereotype.Controller
+import java.util.*
+
+@MessageMapping("channel")
+suspend fun channel(clientFlow: Flow<String>): Flow<String> {
+    clientFlow
+        .take(2)
+        .collect {
+            log.info("Received from the client: $it")
+        }
+
+    return flow {
+        repeat(10) {
+            delay(1000)
+            val message = "Send by the server: ${UUID.randomUUID()}"
+            log.info("Before ----- $message")
+            emit(message)
+        }
+    }
+}
+```
+
+
+
+### 6.8.2 Testing
+
+```
+package org.study.account
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.flow.flow
+import org.slf4j.LoggerFactory
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.messaging.rsocket.RSocketRequester
+import reactor.kotlin.test.test
+import java.lang.Thread.sleep
+import java.util.*
+
+@SpringBootTest
+class ChannelSpec(val requester: RSocketRequester) : StringSpec({
+    "channel"{
+        val clientFlow = flow {
+            while (true) {
+                emit("Send by the client: ${UUID.randomUUID()}")
+            }
+        }
+        val seconds = requester
+            .route("channel")
+            .data(clientFlow)
+            .retrieveFlux(String::class.java)
+            .buffer(2)
+            .test()
+            .expectNextMatches { list ->
+                log.info("Received from the server: {}", list)
+                list.size == 2
+            }.thenCancel()
+            .verify().toSeconds()
+
+        sleep(3000)
+
+        seconds shouldBe 2
+    }
+}){
+    companion object{
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+```
+
 
 
 
