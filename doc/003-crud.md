@@ -255,16 +255,53 @@ spring:
       enabled: true
       initial-size: 1
       max-size: 3
-2. ConnectionFactoryInitializer
-@Bean
-fun initializer(connectionPool: ConnectionPool): ConnectionFactoryInitializer {
-    val initializer = ConnectionFactoryInitializer()
-    initializer.setConnectionFactory(connectionPool)
-    initializer.setDatabasePopulator(
-    	ResourceDatabasePopulator(ClassPathResource("db/migration/V1_init.sql"))
-    )
-    return initializer
+
+2. ConnectionFactory
+
+package org.study.account.config
+
+import io.r2dbc.pool.ConnectionPool
+import io.r2dbc.pool.ConnectionPoolConfiguration
+import io.r2dbc.spi.ConnectionFactories
+import io.r2dbc.spi.ConnectionFactoryOptions
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcProperties
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories
+
+
+@Configuration
+@EnableR2dbcRepositories
+class DatabaseConfig(val properties: R2dbcProperties) {
+    @Bean(destroyMethod = "dispose")
+    @Primary
+    fun connectionPool(): ConnectionPool {
+        val connectionFactoryOptions = connectionFactoryOptions()
+        val connectionFactory = ConnectionFactories.get(connectionFactoryOptions)
+
+        val configuration = ConnectionPoolConfiguration.builder(connectionFactory)
+            .maxIdleTime(properties.pool.maxIdleTime)
+            .initialSize(properties.pool.initialSize)
+            .maxSize(properties.pool.maxSize)
+            .build()
+        return ConnectionPool(configuration)
+    }
+
+    private fun connectionFactoryOptions(): ConnectionFactoryOptions {
+        val optionsFromUrl = ConnectionFactoryOptions.parse(properties.url)
+        return ConnectionFactoryOptions.builder()
+            .option(ConnectionFactoryOptions.DATABASE, optionsFromUrl.getRequiredValue(ConnectionFactoryOptions.DATABASE))
+            .option(ConnectionFactoryOptions.DRIVER, optionsFromUrl.getRequiredValue(ConnectionFactoryOptions.DRIVER))
+            .option(ConnectionFactoryOptions.HOST, optionsFromUrl.getRequiredValue(ConnectionFactoryOptions.HOST))
+            .option(ConnectionFactoryOptions.PORT, optionsFromUrl.getRequiredValue(ConnectionFactoryOptions.PORT))
+            .option(ConnectionFactoryOptions.PROTOCOL, optionsFromUrl.getRequiredValue(ConnectionFactoryOptions.PROTOCOL))
+            .option(ConnectionFactoryOptions.USER, properties.username)
+            .option(ConnectionFactoryOptions.PASSWORD, properties.password)
+            .build()
+    }
 }
+
 ```
 
 ## 3.4 CURD
@@ -274,6 +311,9 @@ fun initializer(connectionPool: ConnectionPool): ConnectionFactoryInitializer {
 ```
 package org.study.account.model
 
+import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDateTime
 import java.util.*
 
@@ -281,17 +321,47 @@ enum class Gender {
     Male, Female, Neutral
 }
 
-data class User(
-    val id: String = UUID.randomUUID().toString(),
-    val username: String,
-    val age: Int,
-    val gender: Gender,
-    val createTime: LocalDateTime = LocalDateTime.now(),
-    val updateTime: LocalDateTime? = null
-)
+sealed class User {
+    data class Create(
+        val username: String,
+        val age: Int,
+        val gender: Gender,
+    ) {
+        fun toDto() = CreateDto(
+            username = username,
+            age = age,
+            gender = gender.name
+        )
+    }
+
+    @Table("t_user")
+    data class CreateDto(
+        @Id val id: String = UUID.randomUUID().toString(),
+        @Column("username") val username: String,
+        @Column("age") val age: Int,
+        @Column("gender")
+        val gender: String,
+    )
+
+    data class Find(
+        val id: String,
+        val username: String,
+        val age: Int,
+        val gender: Gender,
+        val createTime: LocalDateTime,
+        val updateTime: LocalDateTime? = null,
+    )
+}
 ```
 
+### 3.4.2 controller
 
+- C, create a user
+- R
+  - read  a user
+  - read 1..N users 
+- U, update
+- D, delete
 
 
 

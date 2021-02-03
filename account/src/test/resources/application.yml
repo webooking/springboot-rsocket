@@ -4,3 +4,11 @@ spring:
   rsocket:
     server:
       port: 7000
+  r2dbc:
+    url: r2dbc:pool:postgresql://127.0.0.1:5432/rsocket?currentSchema=account
+    username: account
+    password: 123456
+    pool:
+      enabled: true
+      initial-size: 1
+      max-size: 3
