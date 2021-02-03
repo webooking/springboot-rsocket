@@ -306,7 +306,7 @@ class DatabaseConfig(val properties: R2dbcProperties) {
 
 ## 3.4 CURD
 
-### 3.4.1 model
+### 3.4.1 Model
 
 ```
 package org.study.account.model
@@ -314,15 +314,17 @@ package org.study.account.model
 import org.springframework.data.annotation.Id
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import org.springframework.data.relational.core.sql.SqlIdentifier
 import java.time.LocalDateTime
 import java.util.*
+import org.springframework.data.relational.core.query.Update as DBUpdate
 
 enum class Gender {
     Male, Female, Neutral
 }
 
 sealed class User {
-    data class Create(
+    data class CreateRequest(
         val username: String,
         val age: Int,
         val gender: Gender,
@@ -339,22 +341,72 @@ sealed class User {
         @Id val id: String = UUID.randomUUID().toString(),
         @Column("username") val username: String,
         @Column("age") val age: Int,
-        @Column("gender")
-        val gender: String,
+        @Column("gender") val gender: String,
     )
 
+    @Table("t_user")
     data class Find(
-        val id: String,
-        val username: String,
-        val age: Int,
-        val gender: Gender,
-        val createTime: LocalDateTime,
-        val updateTime: LocalDateTime? = null,
+        @Id val id: String,
+        @Column("username") val username: String,
+        @Column("age") val age: Int,
+        @Column("gender") val gender: Gender,
+        @Column("version") val version: Long,
+        @Column("create_time") val createTime: LocalDateTime,
+        @Column("update_time") val updateTime: LocalDateTime? = null,
     )
+
+    data class UpdateRequest(
+        val id: String,
+        val username: String? = null,
+        val age: Int? = null,
+        val gender: Gender? = null,
+        val version: Long,
+    ) {
+        private fun shouldBeUpdated() = username != null || age != null || gender != null
+        fun toDto(): UpdateDto {
+            if (!shouldBeUpdated()) {
+                throw RuntimeException("Parameter error, no data need to be modified")
+            }
+            return UpdateDto(
+                id = id,
+                username = username,
+                age = age,
+                gender = gender?.name,
+                version = version
+            )
+        }
+    }
+
+    @Table("t_user")
+    data class UpdateDto(
+        @Id val id: String,
+        @Column("username") val username: String? = null,
+        @Column("age") val age: Int? = null,
+        @Column("gender") val gender: String? = null,
+        @Column("version") val version: Long,
+        @Column("update_time") val updateTime: LocalDateTime = LocalDateTime.now(),
+    ) {
+        fun toUpdate(): DBUpdate {
+            val map = mutableMapOf<SqlIdentifier, Any>()
+
+            map[SqlIdentifier.unquoted("version")] = version + 1
+            map[SqlIdentifier.unquoted("update_time")] = updateTime
+            if (username != null && username.isNotBlank()) {
+                map[SqlIdentifier.unquoted("username")] = username
+            }
+            if (age != null) {
+                map[SqlIdentifier.unquoted("age")] = age
+            }
+            if (gender != null && gender.isNotBlank()) {
+                map[SqlIdentifier.unquoted("gender")] = gender
+            }
+            return DBUpdate.from(map)
+        }
+    }
 }
 ```
 
-### 3.4.2 controller
+### 3.4.2 Controller
 
 - C, create a user
 - R
@@ -363,11 +415,266 @@ sealed class User {
 - U, update
 - D, delete
 
+```
+package org.study.account.controller
 
+import kotlinx.coroutines.flow.Flow
+import org.slf4j.LoggerFactory
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.stereotype.Controller
+import org.study.account.model.User
+import org.study.account.service.UserService
 
+@Controller
+class UserController(val userService: UserService) {
+    private val log = LoggerFactory.getLogger(this::class.java)
 
+    @MessageMapping("create.the.user")
+    suspend fun create(request: User.CreateRequest) {
+        log.info("create a user, request parameters: {}", request)
+        userService.create(request.toDto())
+    }
 
+    @MessageMapping("find.user.by.name")
+    suspend fun findByName(username: String): User.Find? = userService.findByName(username)
 
+    @MessageMapping("find.all.users")
+    suspend fun findAll(): Flow<User.Find> = userService.findAll()
+
+    @MessageMapping("update.user")
+    suspend fun update(request: User.UpdateRequest) = userService.update(request.toDto())
+
+    @MessageMapping("delete.user")
+    suspend fun delete(id: String) = userService.delete(id)
+}
+```
+
+### 3.4.3 Service
+
+```
+package org.study.account.service
+
+import kotlinx.coroutines.flow.Flow
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import org.study.account.model.User
+import org.study.account.model.dao.UserDao
+
+@Service
+class UserService(val dao: UserDao) {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    suspend fun create(dto: User.CreateDto) {
+        log.info("create the user, dto: {}", dto)
+        dao.create(dto)
+    }
+
+    suspend fun findByName(username: String): User.Find? = dao.findByName(username)
+    suspend fun update(dto: User.UpdateDto) {
+        dao.update(dto)
+    }
+
+    suspend fun delete(id: String) {
+        dao.delete(id)
+    }
+
+    suspend fun findAll(): Flow<User.Find> = dao.findAll()
+}
+```
+
+### 3.4.4 Dao
+
+```
+package org.study.account.model.dao
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingleOrNull
+import org.springframework.data.r2dbc.core.R2dbcEntityTemplate
+import org.springframework.data.r2dbc.core.allAndAwait
+import org.springframework.data.r2dbc.core.flow
+import org.springframework.data.relational.core.query.Criteria.where
+import org.springframework.data.relational.core.query.Query.query
+import org.springframework.stereotype.Repository
+import org.study.account.model.User
+
+@Repository
+class UserDao(val template: R2dbcEntityTemplate) {
+    suspend fun create(dto: User.CreateDto): User.CreateDto? = template.insert(User.CreateDto::class.java).using(dto).awaitSingleOrNull()
+    suspend fun findByName(username: String): User.Find? =
+        template.selectOne(query(where("username").`is`(username)), User.Find::class.java).awaitFirstOrNull()
+
+    suspend fun update(dto: User.UpdateDto): Int = template.update(User.UpdateDto::class.java).matching(
+        query(
+            where("id").`is`(dto.id)
+                .and("version").`is`(dto.version)
+        )
+    ).apply(dto.toUpdate()).awaitFirst()
+
+    suspend fun delete(id: String) = template.delete(User.Find::class.java).matching(
+        query(where("id").`is`(id))
+    ).allAndAwait()
+
+    fun findAll(): Flow<User.Find> = template.select(User.Find::class.java).flow()
+}
+```
+
+### 3.4.5 Testing
+
+```
+package org.study.account
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.reactive.awaitFirst
+import org.slf4j.LoggerFactory
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.messaging.rsocket.RSocketRequester
+import org.springframework.messaging.rsocket.retrieveFlow
+import org.study.account.model.Gender
+import org.study.account.model.User
+import reactor.kotlin.test.test
+import java.util.*
+
+@SpringBootTest
+class CRUDSpec(val requester: RSocketRequester) : StringSpec({
+    "create the user"{
+        requester
+            .route("create.the.user")
+            .data(
+                User.CreateRequest(
+                    username = "yuri",
+                    age = 34,
+                    gender = Gender.Male
+                )
+            )
+            .retrieveMono(Void::class.java)
+            .test()
+            .expectComplete()
+            .verify()
+    }
+    "find user by name"{
+        requester
+            .route("find.user.by.name")
+            .data("yuri")
+            .retrieveMono(User.Find::class.java)
+            .test()
+            .expectNextMatches {
+                log.info("retrieve value from RSocket mapping: {}", it)
+                it.age == 34
+            }
+            .expectComplete()
+            .verify()
+    }
+    "update"{
+        val old = requester
+            .route("find.user.by.name")
+            .data("yuri")
+            .retrieveMono(User.Find::class.java)
+            .awaitFirst()
+
+        val data = User.UpdateRequest(
+            id = old.id,
+            gender = Gender.Neutral,
+            version = old.version
+        )
+        requester
+            .route("update.user")
+            .data(data)
+            .retrieveMono(Void::class.java)
+            .test()
+            .expectComplete()
+            .verify()
+    }
+    "delete the user by id"{
+        val old = requester
+            .route("find.user.by.name")
+            .data("yuri")
+            .retrieveMono(User.Find::class.java)
+            .awaitFirst()
+
+        requester
+            .route("delete.user")
+            .data(old.id)
+            .retrieveMono(Void::class.java)
+            .test()
+            .expectComplete()
+            .verify()
+    }
+    "insert 30 records"{
+        val usernameList = listOf(
+            "Emma",
+            "Olivia",
+            "Ava",
+            "Isabella",
+            "Sophia",
+            "Mia",
+            "Charlotte",
+            "Amelia",
+            "Evelyn",
+            "Abigail",
+            "Harper",
+            "Emily",
+            "Elizabeth",
+            "Avery",
+            "Sofia",
+            "Ella",
+            "Madison",
+            "Scarlett",
+            "Victoria",
+            "Aria",
+            "Grace",
+            "Chloe",
+            "Camila",
+            "Penelope",
+            "Riley",
+            "Layla",
+            "Lillian",
+            "Nora",
+            "Zoey",
+            "Mila",
+        )
+        usernameList.forEach { username ->
+            requester
+                .route("create.the.user")
+                .data(
+                    User.CreateRequest(
+                        username = username,
+                        age = RandomUtil.generateRandom(100),
+                        gender = Gender.values()[RandomUtil.generateRandom(2)]
+                    )
+                )
+                .retrieveMono(Void::class.java)
+                .test()
+                .expectComplete()
+                .verify()
+        }
+    }
+    "find all users"{
+        requester
+            .route("find.all.users")
+            .retrieveFlux(User.Find::class.java)
+            .buffer(10)
+            .test()
+            .expectNextMatches { list ->
+                log.info("top 10: {}", list)
+                list.size == 10
+            }.thenCancel()
+            .verify()
+    }
+}) {
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+
+object RandomUtil {
+    private val random = Random()
+    fun generateRandom(max: Int) = random.nextInt(max)
+}
+
+```
 
 # 4 多表操作
 

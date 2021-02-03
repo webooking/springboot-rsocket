@@ -9,3 +9,13 @@ spring:
       enabled: true
       initial-size: 1
       max-size: 3
+
+logging:
+  level:
+    io:
+      r2dbc:
+        postgresql:
+          PARAM: DEBUG # for parameters
+    org:
+      springframework:
+        r2dbc: DEBUG

@@ -1,5 +1,6 @@
 package org.study.account.service
 
+import kotlinx.coroutines.flow.Flow
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.study.account.model.User
@@ -13,4 +14,15 @@ class UserService(val dao: UserDao) {
         log.info("create the user, dto: {}", dto)
         dao.create(dto)
     }
+
+    suspend fun findByName(username: String): User.Find? = dao.findByName(username)
+    suspend fun update(dto: User.UpdateDto) {
+        dao.update(dto)
+    }
+
+    suspend fun delete(id: String) {
+        dao.delete(id)
+    }
+
+    suspend fun findAll(): Flow<User.Find> = dao.findAll()
 }
