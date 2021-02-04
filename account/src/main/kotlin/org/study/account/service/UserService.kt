@@ -10,19 +10,22 @@ import org.study.account.model.dao.UserDao
 class UserService(val dao: UserDao) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    suspend fun create(dto: User.CreateDto) {
-        log.info("create the user, dto: {}", dto)
-        dao.create(dto)
+    suspend fun create(entity: User.Entity) {
+        log.info("create the user, dto: {}", entity)
+        dao.create(entity)
     }
 
-    suspend fun findByName(username: String): User.Find? = dao.findByName(username)
-    suspend fun update(dto: User.UpdateDto) {
-        dao.update(dto)
+    suspend fun findByName(username: String): User.Entity? = dao.findByName(username)
+
+    suspend fun findAll(): Flow<User.Entity> = dao.findAll()
+
+    suspend fun update(request: User.UpdateRequest) {
+        dao.update(request)
     }
 
     suspend fun delete(id: String) {
         dao.delete(id)
     }
 
-    suspend fun findAll(): Flow<User.Find> = dao.findAll()
+
 }

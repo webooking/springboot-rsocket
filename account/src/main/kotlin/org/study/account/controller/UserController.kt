@@ -14,17 +14,17 @@ class UserController(val userService: UserService) {
     @MessageMapping("create.the.user")
     suspend fun create(request: User.CreateRequest) {
         log.info("create a user, request parameters: {}", request)
-        userService.create(request.toDto())
+        userService.create(request.toEntity())
     }
 
     @MessageMapping("find.user.by.name")
-    suspend fun findByName(username: String): User.Find? = userService.findByName(username)
+    suspend fun findByName(username: String): User.Entity? = userService.findByName(username)
 
     @MessageMapping("find.all.users")
-    suspend fun findAll(): Flow<User.Find> = userService.findAll()
+    suspend fun findAll(): Flow<User.Entity> = userService.findAll()
 
     @MessageMapping("update.user")
-    suspend fun update(request: User.UpdateRequest) = userService.update(request.toDto())
+    suspend fun update(request: User.UpdateRequest) = userService.update(request)
 
     @MessageMapping("delete.user")
     suspend fun delete(id: String) = userService.delete(id)

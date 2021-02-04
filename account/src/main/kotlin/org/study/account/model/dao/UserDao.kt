@@ -14,20 +14,20 @@ import org.study.account.model.User
 
 @Repository
 class UserDao(val template: R2dbcEntityTemplate) {
-    suspend fun create(dto: User.CreateDto): User.CreateDto? = template.insert(User.CreateDto::class.java).using(dto).awaitSingleOrNull()
-    suspend fun findByName(username: String): User.Find? =
-        template.selectOne(query(where("username").`is`(username)), User.Find::class.java).awaitFirstOrNull()
+    suspend fun create(entity: User.Entity): User.Entity? = template.insert(User.Entity::class.java).using(entity).awaitSingleOrNull()
+    suspend fun findByName(username: String): User.Entity? =
+        template.selectOne(query(where("username").`is`(username)), User.Entity::class.java).awaitFirstOrNull()
 
-    suspend fun update(dto: User.UpdateDto): Int = template.update(User.UpdateDto::class.java).matching(
+    suspend fun update(request: User.UpdateRequest): Int = template.update(User.Entity::class.java).matching(
         query(
-            where("id").`is`(dto.id)
-                .and("version").`is`(dto.version)
+            where("id").`is`(request.id)
+                .and("version").`is`(request.version)
         )
-    ).apply(dto.toUpdate()).awaitFirst()
+    ).apply(request.toQuery()).awaitFirst()
 
-    suspend fun delete(id: String) = template.delete(User.Find::class.java).matching(
+    suspend fun delete(id: String) = template.delete(User.Entity::class.java).matching(
         query(where("id").`is`(id))
     ).allAndAwait()
 
-    fun findAll(): Flow<User.Find> = template.select(User.Find::class.java).flow()
+    fun findAll(): Flow<User.Entity> = template.select(User.Entity::class.java).flow()
 }

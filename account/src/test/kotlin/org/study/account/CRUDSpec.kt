@@ -1,12 +1,10 @@
 package org.study.account
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.messaging.rsocket.RSocketRequester
-import org.springframework.messaging.rsocket.retrieveFlow
 import org.study.account.model.Gender
 import org.study.account.model.User
 import reactor.kotlin.test.test
@@ -33,7 +31,7 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
         requester
             .route("find.user.by.name")
             .data("yuri")
-            .retrieveMono(User.Find::class.java)
+            .retrieveMono(User.Entity::class.java)
             .test()
             .expectNextMatches {
                 log.info("retrieve value from RSocket mapping: {}", it)
@@ -46,7 +44,7 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
         val old = requester
             .route("find.user.by.name")
             .data("yuri")
-            .retrieveMono(User.Find::class.java)
+            .retrieveMono(User.Entity::class.java)
             .awaitFirst()
 
         val data = User.UpdateRequest(
@@ -66,7 +64,7 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
         val old = requester
             .route("find.user.by.name")
             .data("yuri")
-            .retrieveMono(User.Find::class.java)
+            .retrieveMono(User.Entity::class.java)
             .awaitFirst()
 
         requester
@@ -117,7 +115,7 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
                     User.CreateRequest(
                         username = username,
                         age = RandomUtil.generateRandom(100),
-                        gender = Gender.values()[RandomUtil.generateRandom(2)]
+                        gender = Gender.values()[RandomUtil.generateRandom(3)]
                     )
                 )
                 .retrieveMono(Void::class.java)
@@ -129,7 +127,7 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
     "find all users"{
         requester
             .route("find.all.users")
-            .retrieveFlux(User.Find::class.java)
+            .retrieveFlux(User.Entity::class.java)
             .buffer(10)
             .test()
             .expectNextMatches { list ->
