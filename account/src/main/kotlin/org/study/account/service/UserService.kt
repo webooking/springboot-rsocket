@@ -12,10 +12,10 @@ class UserService(val dao: UserDao) {
 
     suspend fun create(entity: User.Entity) {
         log.info("create the user, dto: {}", entity)
-        dao.create(entity)
+        dao.insert(entity)
     }
 
-    suspend fun findByName(username: String): User.Entity? = dao.findByName(username)
+    suspend fun findByName(username: String): User.Entity? = dao.findByUsername(username)
 
     suspend fun findAll(): Flow<User.Entity> = dao.findAll()
 
@@ -24,8 +24,6 @@ class UserService(val dao: UserDao) {
     }
 
     suspend fun delete(id: String) {
-        dao.delete(id)
+        dao.deleteById(id)
     }
-
-
 }

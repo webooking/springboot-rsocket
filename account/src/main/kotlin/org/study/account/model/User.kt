@@ -3,10 +3,8 @@ package org.study.account.model
 import org.springframework.data.annotation.Id
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
-import org.springframework.data.relational.core.sql.SqlIdentifier
 import java.time.LocalDateTime
 import java.util.*
-import org.springframework.data.relational.core.query.Update as Query
 
 enum class Gender {
     Male, Female, Neutral
@@ -46,24 +44,23 @@ sealed class User {
         val version: Long,
     ) {
         private fun shouldBeUpdated() = username != null || age != null || gender != null
-        fun toQuery(): Query {
+        fun toSetString(): String {
             if (!shouldBeUpdated()) {
                 throw RuntimeException("Parameter error, no data need to be modified")
             }
-            val map = mutableMapOf<SqlIdentifier, Any>()
+            val buffer = StringBuffer()
+            buffer.append("SET version = ${version + 1}, update_time='${LocalDateTime.now()}'")
 
-            map[SqlIdentifier.unquoted("version")] = version + 1
-            map[SqlIdentifier.unquoted("update_time")] = LocalDateTime.now()
             if (username != null && username.isNotBlank()) {
-                map[SqlIdentifier.unquoted("username")] = username
+                buffer.append(", username = '${username}'")
             }
             if (age != null) {
-                map[SqlIdentifier.unquoted("age")] = age
+                buffer.append(", age=${age}")
             }
             if (gender != null) {
-                map[SqlIdentifier.unquoted("gender")] = gender.name
+                buffer.append(", gender='${gender.name}'")
             }
-            return Query.from(map)
+            return buffer.toString()
         }
     }
 }
