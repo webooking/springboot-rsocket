@@ -26,3 +26,4 @@ insert into t_account(id,user_id,balance) values
  (uuid_in(md5(random()::text || clock_timestamp()::text)::cstring), 'user003', 10);
 
 select * from t_account;
+select * from t_user;

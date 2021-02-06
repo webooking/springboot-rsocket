@@ -6,15 +6,17 @@ import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
 import org.study.account.model.User
 import org.study.account.service.UserService
+import org.study.account.service.validator.UserControllerValidator
 
 @Controller
-class UserController(val userService: UserService) {
+class UserController(val userService: UserService, val validator: UserControllerValidator) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @MessageMapping("create.the.user")
     suspend fun create(request: User.CreateRequest) {
-        log.info("create a user, request parameters: {}", request)
-        userService.create(request.toEntity())
+        val validatedRequest = validator.create(request)
+        log.info("create a user, request parameters: {}", validatedRequest)
+        userService.create(validatedRequest.toEntity())
     }
 
     @MessageMapping("find.user.by.name")

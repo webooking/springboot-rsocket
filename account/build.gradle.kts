@@ -1,3 +1,5 @@
+@file:Suppress("SpellCheckingInspection")
+
 plugins {
     idea
     id("org.springframework.boot") version "2.4.2"
@@ -15,7 +17,7 @@ idea {
 }
 
 group = "org.study"
-version = "1.0.3"
+version = "1.0.4"
 
 repositories {
     mavenCentral()
@@ -24,12 +26,15 @@ repositories {
 dependencies {
     val kotestVersion = "4.4.0.RC2"
     val springmockkVersion = "3.0.1"
+    val validatorVersion = "6.2.0.Final"
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 
     implementation("org.springframework.boot:spring-boot-starter-rsocket")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+    implementation("org.hibernate.validator:hibernate-validator:$validatorVersion")
 
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     runtimeOnly("io.r2dbc:r2dbc-postgresql")

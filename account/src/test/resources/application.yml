@@ -18,7 +18,7 @@ logging:
     io:
       r2dbc:
         postgresql:
-          PARAM: DEBUG # for parameters
+          PARAM: DEBUG
     org:
       springframework:
         r2dbc: DEBUG

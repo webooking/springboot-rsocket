@@ -18,7 +18,7 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
             .data(
                 User.CreateRequest(
                     username = "yuri",
-                    age = 34,
+                    age = 15,
                     gender = Gender.Male
                 )
             )

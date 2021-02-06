@@ -5,6 +5,7 @@ import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDateTime
 import java.util.*
+import javax.validation.constraints.Min
 
 enum class Gender {
     Male, Female, Neutral
@@ -13,7 +14,7 @@ enum class Gender {
 sealed class User {
     data class CreateRequest(
         val username: String,
-        val age: Int,
+        @get:Min(18) val age: Int,
         val gender: Gender,
     ) {
         fun toEntity() = Entity(
