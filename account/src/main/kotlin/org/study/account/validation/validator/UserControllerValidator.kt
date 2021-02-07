@@ -1,4 +1,4 @@
-package org.study.account.service.validator
+package org.study.account.validation.validator
 
 import org.springframework.stereotype.Component
 import org.springframework.validation.annotation.Validated

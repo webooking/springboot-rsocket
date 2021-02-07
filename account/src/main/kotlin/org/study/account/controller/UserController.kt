@@ -6,7 +6,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
 import org.study.account.model.User
 import org.study.account.service.UserService
-import org.study.account.service.validator.UserControllerValidator
+import org.study.account.validation.validator.UserControllerValidator
 
 @Controller
 class UserController(val userService: UserService, val validator: UserControllerValidator) {
@@ -16,7 +16,7 @@ class UserController(val userService: UserService, val validator: UserController
     suspend fun create(request: User.CreateRequest) {
         val validatedRequest = validator.create(request)
         log.info("create a user, request parameters: {}", validatedRequest)
-        userService.create(validatedRequest.toEntity())
+//        userService.create(validatedRequest.toEntity())
     }
 
     @MessageMapping("find.user.by.name")
