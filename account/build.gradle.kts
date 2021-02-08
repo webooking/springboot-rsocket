@@ -21,6 +21,7 @@ version = "1.0.5"
 
 repositories {
     mavenCentral()
+    maven(url = "http://localhost:5433/repository/rsocket/")
 }
 
 dependencies {
@@ -35,6 +36,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     implementation("org.hibernate.validator:hibernate-validator:$validatorVersion")
+    implementation("org.study:common:1.0.0")
 
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     runtimeOnly("io.r2dbc:r2dbc-postgresql")

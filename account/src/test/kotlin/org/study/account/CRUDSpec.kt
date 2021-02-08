@@ -1,7 +1,9 @@
 package org.study.account
 
 import io.kotest.core.spec.style.StringSpec
+import io.rsocket.exceptions.CustomRSocketException
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.security.SecurityProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.messaging.rsocket.RSocketRequester
 import org.study.account.model.Gender
@@ -24,13 +26,17 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
                         countryCode = "+1",
                         number = "7785368920"
                     ),
-                    legs = 2,
+                    legs = 1, //腿的个数必须是偶数
                     ageBracket = "Adolescent"
                 )
             )
             .retrieveMono(Void::class.java)
             .test()
-            .expectComplete()
+            .expectErrorMatches { ex ->
+                ex is CustomRSocketException
+            }
+//            .expectError(CustomRSocketException::class)
+//            .expectComplete()
             .verify()
     }
 }) {
