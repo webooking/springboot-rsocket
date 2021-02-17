@@ -14,7 +14,7 @@ enum class Gender {
     Male, Female, Neutral
 }
 
-sealed class User {
+sealed class Custom {
     @AgeBracket
     data class CreateRequest(
         val username: String,
@@ -25,7 +25,7 @@ sealed class User {
         @get:Odd
         val legs: Int,
         val ageBracket: String,
-    ) : User() {
+    ) : Custom() {
         fun toEntity() = Entity(
             id = UUID.randomUUID().toString(),
             username = username,
@@ -44,7 +44,7 @@ sealed class User {
         @Column("version") val version: Long,
         @Column("create_time") val createTime: LocalDateTime? = null,
         @Column("update_time") val updateTime: LocalDateTime? = null,
-    ) : User()
+    ) : Custom()
 
     data class UpdateRequest(
         val id: String,
@@ -52,7 +52,7 @@ sealed class User {
         val age: Int? = null,
         val gender: Gender? = null,
         val version: Long,
-    ) : User() {
+    ) : Custom() {
         private fun shouldBeUpdated() = username != null || age != null || gender != null
         fun toSetString(): String {
             if (!shouldBeUpdated()) {

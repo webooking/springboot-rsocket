@@ -17,7 +17,7 @@ idea {
 }
 
 group = "org.study"
-version = "1.0.5"
+version = "1.0.6"
 
 repositories {
     mavenCentral()
@@ -34,6 +34,16 @@ dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter-rsocket")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+    implementation("org.springframework.boot:spring-boot-starter-security"){
+        exclude(module = "spring-security-web")
+    }
+    implementation("org.springframework.security:spring-security-messaging")
+    implementation("org.springframework.security:spring-security-rsocket")
+    implementation("org.springframework.security:spring-security-oauth2-resource-server"){
+        exclude(module = "spring-security-web")
+        exclude(module = "spring-web")
+    }
 
     implementation("org.hibernate.validator:hibernate-validator:$validatorVersion")
     implementation("org.study:common:1.0.0")
