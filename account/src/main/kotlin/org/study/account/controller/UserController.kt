@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.study.account.model.Custom
 import org.study.account.service.UserService
@@ -22,9 +23,10 @@ class UserController(
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @MessageMapping("create.the.user")
-    suspend fun create(@AuthenticationPrincipal operator: UserDetails, request: Custom.CreateRequest) {
+    suspend fun create(@AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom, request: Custom.CreateRequest) {
         val validatedRequest = validator.create(request)
         log.info("operator `{}` create a user, request parameters: {}", operator.username, validatedRequest)
+
         throw BusinessException("custom unknown exception")
 //        userService.create(validatedRequest.toEntity())
     }

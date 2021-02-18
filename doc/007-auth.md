@@ -308,23 +308,222 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
 
 
 
-# 3 signin
+# 3 Refactoring
+
+针对权限管理的特殊性，个性化定制`UserDetails`
+
+- ```
+  authorities = emptyList()
+  ```
+
+- 去掉role。取而代之的是，每个角色一个model，比如：Admin，Custom
+
+于是，配置接口的权限时，就不需要判断角色了，而是，直接拿model。从token到Model (Admin/Custom)的转换过程，是本节重构的重点
+
+## 3.1 security configuration
+
+```
+package org.study.account.config
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.messaging.rsocket.RSocketStrategies
+import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
+import org.springframework.security.config.annotation.rsocket.EnableRSocketSecurity
+import org.springframework.security.config.annotation.rsocket.RSocketSecurity
+import org.springframework.security.config.annotation.rsocket.RSocketSecurity.AuthorizePayloadsSpec
+import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.messaging.handler.invocation.reactive.AuthenticationPrincipalArgumentResolver
+import org.springframework.security.oauth2.core.OAuth2AccessToken
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication
+import org.springframework.security.rsocket.core.PayloadSocketAcceptorInterceptor
+import org.study.account.model.auth.Custom
+import reactor.core.publisher.Mono
+import java.time.Instant
+
+
+@Configuration
+@EnableRSocketSecurity
+@EnableReactiveMethodSecurity
+class RSocketSecurityConfig {
+    @Bean
+    fun mapReactiveUserDetailsService(): MapReactiveUserDetailsService {
+        return MapReactiveUserDetailsService(
+            User.withUsername("user").password("user").roles("USER").build(),
+            User.withUsername("admin").password("admin").roles("USER").build()
+        )
+    }
+
+    @Bean
+    fun messageHandler(strategies: RSocketStrategies) = RSocketMessageHandler().apply {
+        argumentResolverConfigurer.addCustomResolver(AuthenticationPrincipalArgumentResolver())
+        rSocketStrategies = strategies
+    }
+
+    @Bean
+    fun authorization(security: RSocketSecurity): PayloadSocketAcceptorInterceptor {
+        security.authorizePayload { authorize: AuthorizePayloadsSpec ->
+            authorize
+                .route("signin").permitAll()
+                .anyRequest().authenticated()
+                .anyExchange().permitAll()
+        }
+            .simpleAuthentication { simple ->
+                simple.authenticationManager { authentication ->
+                    val accessToken = authentication.name
+                    val user = Custom(
+                        "user001",
+                        "user123456",
+                        "1374567890",
+                        "yuri@qq.com"
+                    ).toAuthUser()
+
+                    Mono.just(
+                        BearerTokenAuthentication(
+                            user,
+                            OAuth2AccessToken(
+                                OAuth2AccessToken.TokenType.BEARER,
+                                accessToken,
+                                Instant.now(),
+                                Instant.now().plusSeconds(100)
+                            ),
+                            emptyList(),
+                        )
+                    )
+                }
+            }
+        return security.build()
+    }
+
+}
+```
 
 
 
-# 4 Refresh Token
+## 3.2 Protected API
+
+```
+package org.study.account.controller
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.flow.Flow
+import org.slf4j.LoggerFactory
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.stereotype.Controller
+import org.study.account.model.Custom
+import org.study.account.service.UserService
+import org.study.account.validation.validator.UserControllerValidator
+import org.study.common.config.BusinessException
+import org.study.common.config.GlobalExceptionHandler
+
+@Controller
+class UserController(
+    val userService: UserService,
+    val validator: UserControllerValidator,
+    override val mapper: ObjectMapper
+) : GlobalExceptionHandler(mapper) {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    @MessageMapping("create.the.user")
+    suspend fun create(@AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom, request: Custom.CreateRequest) {
+        val validatedRequest = validator.create(request)
+        log.info("operator `{}` create a user, request parameters: {}", operator.username, validatedRequest)
+
+        throw BusinessException("custom unknown exception")
+//        userService.create(validatedRequest.toEntity())
+    }
+}
+```
+
+## 3.3 Custom UserDetails
+
+```
+package org.study.account.model.auth
+
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.oauth2.core.user.OAuth2User
+
+data class AuthUser(
+    private val attributes: Map<String, Any>
+) : OAuth2User {
+    override fun getName(): String = attributes["username"] as String
+
+    override fun getAttributes(): Map<String, Any> = attributes
+
+    override fun getAuthorities(): List<out GrantedAuthority> = emptyList()
+
+    fun getAdmin() = Admin(
+        id = attributes["id"] as String,
+        username = attributes["username"] as String,
+    )
+
+    fun getCustom() = Custom(
+        id = attributes["id"] as String,
+        username = attributes["username"] as String,
+        phone = attributes["phone"] as String,
+        email = attributes["email"] as String,
+    )
+}
+
+data class Admin(
+    val id: String,
+    val username: String,
+){
+    fun toAuthUser() = AuthUser(
+        mapOf(
+            "id" to id,
+            "username" to username,
+        )
+    )
+}
+
+data class Custom(
+    val id: String,
+    val username: String,
+    val phone: String,
+    val email: String,
+){
+    fun toAuthUser() = AuthUser(
+        mapOf(
+            "id" to id,
+            "username" to username,
+            "phone" to phone,
+            "email" to email,
+        )
+    )
+}
+```
+
+# 4 signin
 
 
 
-# 5 Exception
-
-## 5.1 expired AccessToken/RefreshToken
-
-## 5.2 error AccessToken/RefreshToken
+# 5 Refresh Token
 
 
 
+# 6 Exception
 
+## 6.1 expired
+
+### 6.1.1 AccessToken
+
+### 6.1.2 RefreshToken
+
+
+
+## 6.2 error
+
+error AccessToken/RefreshToken
+
+
+
+# 7 
 
 
 

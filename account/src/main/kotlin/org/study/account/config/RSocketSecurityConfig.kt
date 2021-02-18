@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.messaging.rsocket.RSocketStrategies
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity
 import org.springframework.security.config.annotation.rsocket.EnableRSocketSecurity
 import org.springframework.security.config.annotation.rsocket.RSocketSecurity
@@ -12,8 +11,12 @@ import org.springframework.security.config.annotation.rsocket.RSocketSecurity.Au
 import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.messaging.handler.invocation.reactive.AuthenticationPrincipalArgumentResolver
+import org.springframework.security.oauth2.core.OAuth2AccessToken
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication
 import org.springframework.security.rsocket.core.PayloadSocketAcceptorInterceptor
+import org.study.account.model.auth.Custom
 import reactor.core.publisher.Mono
+import java.time.Instant
 
 
 @Configuration
@@ -22,9 +25,6 @@ import reactor.core.publisher.Mono
 class RSocketSecurityConfig {
     @Bean
     fun mapReactiveUserDetailsService(): MapReactiveUserDetailsService {
-        fun buildUser(username: String, password: String, role: String) =
-            User.withUsername(username).password(password).roles(role).build()
-
         return MapReactiveUserDetailsService(
             User.withUsername("user").password("user").roles("USER").build(),
             User.withUsername("admin").password("admin").roles("USER").build()
@@ -42,20 +42,29 @@ class RSocketSecurityConfig {
         security.authorizePayload { authorize: AuthorizePayloadsSpec ->
             authorize
                 .route("signin").permitAll()
-                .route("create.the.user").hasRole("USER")
                 .anyRequest().authenticated()
                 .anyExchange().permitAll()
         }
             .simpleAuthentication { simple ->
                 simple.authenticationManager { authentication ->
                     val accessToken = authentication.name
-                    val user = User.withUsername("user123456").password("").roles("USER").build()
+                    val user = Custom(
+                        "user001",
+                        "user123456",
+                        "1374567890",
+                        "yuri@qq.com"
+                    ).toAuthUser()
 
                     Mono.just(
-                        UsernamePasswordAuthenticationToken(
+                        BearerTokenAuthentication(
                             user,
-                            null,
-                            user.authorities
+                            OAuth2AccessToken(
+                                OAuth2AccessToken.TokenType.BEARER,
+                                accessToken,
+                                Instant.now(),
+                                Instant.now().plusSeconds(100)
+                            ),
+                            emptyList(),
                         )
                     )
                 }
