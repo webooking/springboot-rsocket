@@ -27,7 +27,6 @@ repositories {
 dependencies {
     val kotestVersion = "4.4.0.RC2"
     val springmockkVersion = "3.0.1"
-    val validatorVersion = "6.2.0.Final"
     val commonVersion = "1.0.0"
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
@@ -36,15 +35,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-rsocket")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("org.springframework.security:spring-security-config")
-    implementation("org.springframework.security:spring-security-messaging")
-    implementation("org.springframework.security:spring-security-rsocket")
-    implementation("org.springframework.security:spring-security-oauth2-resource-server"){
-        exclude(module = "spring-security-web")
-        exclude(module = "spring-web")
-    }
-
     implementation("org.study:common:$commonVersion")
+
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")

@@ -515,6 +515,183 @@ log.info("-------token: {}", token.tokenValue)
 | auth.update.authentication | 1. 更新（缓存中的）UserDetails<br />2. 删除AccessToken<br />3. 抛异常：AccessToken过期 | clientId, clientSecret, UserDetails  |                                                  |
 | auth.refresh.token         | 刷新token<br />1. 生成新的accessToken<br />2. 重新加载UserDetails | clientId, clientSecret, refreshToken | UserDetails，AccessToken                         |
 
+## 4.2 Spring Data Redis Reactive
+
+### 4.2.1 Deploy and Run redis in docker
+
+```
+# 1 下载redis镜像
+docker image pull redis:rc-alpine3.13
+
+# 2 创建redis需要的volume
+yuri@yuris-MBP ~ % docker volume create redis
+redis
+
+# 3 启动redis container
+docker container run --name redis \
+--mount type=volume,source=redis,target=/data \
+-p 6379:6379 \
+-d redis:rc-alpine3.13 \
+redis-server --appendonly yes
+
+# 4 测试
+yuri@yuris-MBP ~ % docker container exec -it redis sh  
+/data # redis-cli
+127.0.0.1:6379> keys *
+1) "access_token_001"
+127.0.0.1:6379> 
+```
+
+### 4.2.2 dependencies
+
+```
+implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+```
+
+### 4.2.3 build.gradle.kts
+
+```
+@file:Suppress("SpellCheckingInspection")
+
+plugins {
+    idea
+    id("org.springframework.boot") version "2.4.2"
+    id("io.spring.dependency-management") version "1.0.11.RELEASE"
+
+    kotlin("jvm") version "1.4.21"
+    kotlin("plugin.spring") version "1.4.21"
+}
+
+idea {
+    module {
+        isDownloadJavadoc = false
+        isDownloadSources = true
+    }
+}
+
+group = "org.study"
+version = "1.0.0"
+
+repositories {
+    mavenCentral()
+    maven(url = "http://localhost:5433/repository/rsocket/")
+}
+
+dependencies {
+    val kotestVersion = "4.4.0.RC2"
+    val springmockkVersion = "3.0.1"
+    val commonVersion = "1.0.0"
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
+
+    implementation("org.springframework.boot:spring-boot-starter-rsocket")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+    implementation("org.study:common:$commonVersion")
+
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
+        exclude(module = "mockito-core")
+    }
+    testImplementation("io.projectreactor:reactor-test")
+    testImplementation("com.ninja-squad:springmockk:$springmockkVersion")
+    testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
+    testImplementation("io.kotest:kotest-assertions-core-jvm:$kotestVersion")
+    testImplementation("io.kotest:kotest-extensions-spring-jvm:$kotestVersion")
+}
+
+tasks {
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions {
+            freeCompilerArgs = listOf("-Xjsr305=strict")
+            jvmTarget = "11"
+        }
+    }
+    withType<Test> {
+        useJUnitPlatform()
+    }
+    withType<Wrapper> {
+        distributionType = Wrapper.DistributionType.ALL
+        gradleVersion = "6.8.1"
+    }
+}
+```
+
+
+
+### 4.2.4 application.yml
+
+```
+spring:
+  redis:
+    host: localhost
+    port: 6379
+```
+
+### 4.2.5 Controller
+
+```
+package org.study.auth.controller
+
+import kotlinx.coroutines.reactive.awaitFirst
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.stereotype.Controller
+import java.util.*
+
+@Controller
+class AuthController(val strTemplate: ReactiveStringRedisTemplate) {
+    @MessageMapping("auth.generate.token")
+    suspend fun generateToken(): String {
+        val key = "access_token_001"
+        val tokenValue = UUID.randomUUID().toString()
+        strTemplate.opsForValue().set(key, tokenValue).awaitFirst()
+        return strTemplate.opsForValue().get(key).awaitFirst()
+    }
+}
+```
+
+### 4.2.6 Testing
+
+```
+package org.study.auth
+
+import io.kotest.core.spec.style.StringSpec
+import org.slf4j.LoggerFactory
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.messaging.rsocket.RSocketRequester
+import reactor.kotlin.test.test
+
+@SpringBootTest
+class AuthControllerSpec(val requester: RSocketRequester) : StringSpec({
+    "generate token"{
+        requester
+            .route("auth.generate.token")
+            .retrieveMono(String::class.java)
+            .test()
+            .expectNextMatches {
+                log.info("retrieve value from RSocket mapping: {}", it)
+                it is String
+            }
+            .expectComplete()
+            .verify()
+    }
+}) {
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+```
+
+
+
+
+
+
+
 
 
 

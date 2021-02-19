@@ -1,6 +1,9 @@
 spring:
   main:
     lazy-initialization: true
+  rsocket:
+    server:
+      port: 7001
   redis:
     host: localhost
     port: 6379
