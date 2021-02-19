@@ -348,13 +348,6 @@ import java.time.Instant
 @EnableRSocketSecurity
 @EnableReactiveMethodSecurity
 class RSocketSecurityConfig {
-    @Bean
-    fun mapReactiveUserDetailsService(): MapReactiveUserDetailsService {
-        return MapReactiveUserDetailsService(
-            User.withUsername("user").password("user").roles("USER").build(),
-            User.withUsername("admin").password("admin").roles("USER").build()
-        )
-    }
 
     @Bean
     fun messageHandler(strategies: RSocketStrategies) = RSocketMessageHandler().apply {
@@ -499,7 +492,34 @@ data class Custom(
 }
 ```
 
+## 3.4 Transform token between rsocket services
+
+```
+val token = ReactiveSecurityContextHolder.getContext().map { 
+  it.authentication.credentials as OAuth2AccessToken 
+}.awaitFirst()
+log.info("-------token: {}", token.tokenValue)
+```
+
 # 4 signin
+
+## 4.1 auth
+
+重构account的服务，将与token相关的功能移入`auth`中。`auth`开放的接口如下：
+
+| endpoint                   | Desc                                                         | Input                                | Output                                           |
+| -------------------------- | ------------------------------------------------------------ | ------------------------------------ | ------------------------------------------------ |
+| auth.generate.token        | 发放token                                                    | clientId, clientSecret, UserDetails  | UserDetails，<br />AccessToken<br />RefreshToken |
+| auth.delete.token          | 清理token相关的所有缓存                                      | clientId, clientSecret, token        |                                                  |
+| auth.get.authentication    | 拿token换UserDetails                                         | clientId, clientSecret,token         | UserDetails                                      |
+| auth.update.authentication | 1. 更新（缓存中的）UserDetails<br />2. 删除AccessToken<br />3. 抛异常：AccessToken过期 | clientId, clientSecret, UserDetails  |                                                  |
+| auth.refresh.token         | 刷新token<br />1. 生成新的accessToken<br />2. 重新加载UserDetails | clientId, clientSecret, refreshToken | UserDetails，AccessToken                         |
+
+
+
+
+
+
 
 
 
@@ -522,8 +542,6 @@ data class Custom(
 error AccessToken/RefreshToken
 
 
-
-# 7 
 
 
 

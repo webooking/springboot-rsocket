@@ -17,7 +17,7 @@ idea {
 }
 
 group = "org.study"
-version = "1.0.6"
+version = "1.0.0"
 
 repositories {
     mavenCentral()
@@ -44,11 +44,7 @@ dependencies {
         exclude(module = "spring-web")
     }
 
-    implementation("org.hibernate.validator:hibernate-validator:$validatorVersion")
     implementation("org.study:common:$commonVersion")
-
-    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
-    runtimeOnly("io.r2dbc:r2dbc-postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")

@@ -7,6 +7,6 @@ import javax.validation.Valid
 
 @Component
 @Validated
-class UserControllerValidator {
-    fun create(@Valid request: Custom.CreateRequest) = request
+class ArgumentValidator {
+    fun <T> validate(@Valid request: T) = request
 }

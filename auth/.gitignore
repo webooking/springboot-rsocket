@@ -1,0 +1,33 @@
+**/.gradle/
+**/gradle/wrapper/gradle-wrapper.jar
+**/build/
+**/out/
+**/.kotlintest/
+**/logs/
+
+### STS ###
+**/.apt_generated
+**/.classpath
+**/.factorypath
+**/.project
+**/.settings
+**/.springBeans
+**/.sts4-cache
+
+### IntelliJ IDEA ###
+**/.idea/
+**/*.iws
+**/*.iml
+**/*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+**/.vscode/
+
+**/*.DS_Store
