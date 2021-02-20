@@ -515,6 +515,8 @@ log.info("-------token: {}", token.tokenValue)
 | auth.update.authentication | 1. 更新（缓存中的）UserDetails<br />2. 删除AccessToken<br />3. 抛异常：AccessToken过期 | clientId, clientSecret, UserDetails  |                                                  |
 | auth.refresh.token         | 刷新token<br />1. 生成新的accessToken<br />2. 重新加载UserDetails | clientId, clientSecret, refreshToken | UserDetails，AccessToken                         |
 
+
+
 ## 4.2 Spring Data Redis Reactive
 
 ### 4.2.1 Deploy and Run redis in docker
@@ -686,19 +688,160 @@ class AuthControllerSpec(val requester: RSocketRequester) : StringSpec({
 }
 ```
 
+## 4.3 Store Client Object in redis
+
+### 4.3.1 Client
+
+```
+package org.study.auth.model
+
+import org.study.auth.util.RandomPasswordGenerator
+import java.util.*
+
+data class Client(
+    val name: String, // account,order
+    val id: String = UUID.randomUUID().toString(),
+    val secret: String = RandomPasswordGenerator.generate(),
+    val apiList: List<String> = listOf(
+        API.GET_AUTHENTICATION,
+    )
+)
+
+object API {
+    const val GENERATE_TOKEN = "auth.generate.token"
+    const val DELETE_TOKEN = "auth.delete.token"
+    const val GET_AUTHENTICATION = "auth.get.authentication"
+    const val UPDATE_AUTHENTICATION = "auth.update.authentication"
+    const val REFRESH_TOKEN = "auth.refresh.token"
+}
+```
+
+### 4.3.2 redis template
+
+```
+package org.study.auth.config
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer
+import org.springframework.data.redis.serializer.RedisSerializationContext
+import org.springframework.data.redis.serializer.StringRedisSerializer
+import org.study.auth.model.Client
 
 
+@Configuration
+class RedisConfig {
+    @Bean("clientRedisTemplate")
+    fun clientRedisTemplate(factory: ReactiveRedisConnectionFactory) = ReactiveRedisTemplate(
+        factory,
+        RedisSerializationContext
+            .newSerializationContext<String, Client>(StringRedisSerializer()) // keySerializer
+            .value(Jackson2JsonRedisSerializer(Client::class.java)) //valueSerializer
+            .build()
+    )
+}
+```
 
+### 4.3.3 Service
 
+为了安全，不开放操作client的接口，所以，没有controller，只有service
 
+> 注：请重点关注kotlin coroutines + reactive API的代码风格
 
+```
+package org.study.auth.service
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.stereotype.Service
+import org.study.auth.model.API
+import org.study.auth.model.Client
+import reactor.core.publisher.Flux
 
+@Service
+class ClientService(val clientRedisTemplate: ReactiveRedisTemplate<String, Client>) {
+    suspend fun save(): Flow<Boolean> {
+        val account = Client(
+            name = "account",
+            apiList = listOf(
+                API.GENERATE_TOKEN,
+                API.DELETE_TOKEN,
+                API.GET_AUTHENTICATION,
+                API.UPDATE_AUTHENTICATION,
+                API.REFRESH_TOKEN,
+            )
+        )
 
+        val order = Client("order")
 
+        return Flux.just(account, order).flatMap {
+            clientRedisTemplate.opsForValue().set("auth:client:${it.name}", it)
+        }.asFlow()
+    }
+}
+```
 
+### 4.3.4 Testing
 
+```
+package org.study.auth
 
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.booleans.shouldBeTrue
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import org.slf4j.LoggerFactory
+import org.springframework.boot.test.context.SpringBootTest
+import org.study.auth.service.ClientService
+
+@SpringBootTest
+class ClientServiceSpec(val clientService: ClientService) : StringSpec({
+    "save clients"{
+        clientService
+            .save()
+            .onEach {
+                it.shouldBeTrue()
+            }
+            .onCompletion {
+                if (it == null) log.info("Completed successfully")
+            }.collect()
+    }
+
+}) {
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+```
+
+### 4.3.5 view redis client
+
+```
+# 1 进入redis container
+docker container exec -it redis sh
+
+# 2 进入redis client
+redis-cli
+
+# 3 查看key
+127.0.0.1:6379> keys *
+1) "auth:client:order"
+2) "auth:client:account"
+3) "access_token_001"
+127.0.0.1:6379> get auth:client:order
+"{\"name\":\"order\",\"id\":\"2dba9bc0-ca66-4e8b-b1a1-75c664aac639\",\"secret\":\"*#XR%NS{G}$%L)v4N9un)N_\",\"apiList\":[\"auth.get.authentication\"]}"
+127.0.0.1:6379> get auth:client:account
+"{\"name\":\"account\",\"id\":\"9825ad09-3eb2-4df4-8b5b-6b60aa4008da\",\"secret\":\"I.}u(jvB@L1BqTL`PLQH3t/\",\"apiList\":[\"auth.generate.token\",\"auth.delete.token\",\"auth.get.authentication\",\"auth.update.authentication\",\"auth.refresh.token\"]}"
+127.0.0.1:6379> ttl auth:client:account
+(integer) -1
+127.0.0.1:6379> 
+```
+
+![image-20210220023035747](/image-20210220023035747.png)
 
 # 5 Refresh Token
 

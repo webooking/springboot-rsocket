@@ -1,6 +1,7 @@
 package org.study.auth.controller
 
 import kotlinx.coroutines.reactive.awaitFirst
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.stereotype.Controller
