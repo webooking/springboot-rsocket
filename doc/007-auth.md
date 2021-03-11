@@ -843,23 +843,448 @@ redis-cli
 
 ![image-20210220023035747](/image-20210220023035747.png)
 
-# 5 Refresh Token
+
+
+## 4.4 Select and Delete Clients in redis
+
+### 4.4.1 Service
+
+```
+package org.study.auth.service
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.stereotype.Service
+import org.study.auth.model.API
+import org.study.auth.model.Client
+import reactor.kotlin.core.publisher.toFlux
+
+@Service
+class ClientService(val clientRedisTemplate: ReactiveRedisTemplate<String, Client>) {
+    private val clientNamePrefix = "auth:client"
+    private val clientNames = listOf<String>("account", "order")
+
+    suspend fun save(): Flow<Boolean> = clientNames.toFlux().map { clientName ->
+        when (clientName) {
+            "account" -> Client(
+                name = clientName,
+                apiList = listOf(
+                    API.GENERATE_TOKEN,
+                    API.DELETE_TOKEN,
+                    API.GET_AUTHENTICATION,
+                    API.UPDATE_AUTHENTICATION,
+                    API.REFRESH_TOKEN,
+                )
+            )
+            else -> Client(clientName)
+        }
+    }.flatMap { client ->
+        clientRedisTemplate.opsForValue().set("${clientNamePrefix}:${client.name}", client)
+    }.asFlow()
+
+    suspend fun findAll(): Flow<Client> = clientNames.toFlux()
+        .map { clientName ->
+            "${clientNamePrefix}:${clientName}"
+        }.flatMap {
+            clientRedisTemplate.opsForValue().get(it)
+        }.asFlow()
+
+    suspend fun clear(): Flow<Boolean> = clientNames.toFlux()
+        .map {
+            "${clientNamePrefix}:${it}"
+        }.flatMap {
+            clientRedisTemplate.opsForValue().delete(it)
+        }.asFlow()
+}
+```
+
+### 4.4.2 Testing
+
+```
+package org.study.auth
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldContain
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import org.slf4j.LoggerFactory
+import org.springframework.boot.test.context.SpringBootTest
+import org.study.auth.model.API
+import org.study.auth.service.ClientService
+
+@SpringBootTest
+class ClientServiceSpec(val clientService: ClientService) : StringSpec({
+    "save clients"{
+        clientService
+            .save()
+            .onEach {
+                it.shouldBeTrue()
+            }
+            .onCompletion {
+                if (it == null) log.info("Completed successfully")
+            }.collect()
+    }
+    "find all clients"{
+        clientService.findAll().onEach {
+            log.info("client values: {}", it)
+            it.apiList.shouldContain(API.GET_AUTHENTICATION)
+        }.onCompletion {
+            log.info("Completed successfully")
+        }.collect()
+    }
+    "clear all clients"{
+        clientService
+            .clear()
+            .onEach {
+                it.shouldBeTrue()
+            }
+            .onCompletion {
+                log.info("Completed successfully")
+            }.collect()
+    }
+
+}) {
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+```
 
 
 
-# 6 Exception
+## 4.5 models
 
-## 6.1 expired
+### 4.5.1 dependencies
 
-### 6.1.1 AccessToken
+```
+implementation("org.springframework.security:spring-security-oauth2-core"){
+  exclude(group = "org.springframework")
+}
+```
 
-### 6.1.2 RefreshToken
+### 4.5.2 UserDetails
+
+```
+package org.study.auth.model
+
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.oauth2.core.user.OAuth2User
+
+data class AuthUser(
+    private val attributes: Map<String, Any>
+) : OAuth2User {
+    override fun getName(): String = attributes["username"] as String
+
+    override fun getAttributes(): Map<String, Any> = attributes
+
+    override fun getAuthorities(): List<out GrantedAuthority> = emptyList()
+
+    fun getAdmin() = Admin(
+        id = attributes["id"] as String,
+        username = attributes["username"] as String,
+    )
+
+    fun getCustom() = Custom(
+        id = attributes["id"] as String,
+        username = attributes["username"] as String,
+        phone = attributes["phone"] as String,
+        email = attributes["email"] as String,
+    )
+}
+
+data class Admin(
+    val id: String,
+    val username: String,
+){
+    fun toAuthUser() = AuthUser(
+        mapOf(
+            "id" to id,
+            "username" to username,
+        )
+    )
+}
+
+data class Custom(
+    val id: String,
+    val username: String,
+    val phone: String,
+    val email: String,
+){
+    fun toAuthUser() = AuthUser(
+        mapOf(
+            "id" to id,
+            "username" to username,
+            "phone" to phone,
+            "email" to email,
+        )
+    )
+}
+```
+
+### 4.5.3 Token
+
+```
+package org.study.auth.model
+
+import org.springframework.security.oauth2.core.OAuth2AccessToken
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+
+enum class Role {
+    Admin, Custom
+}
+
+data class AccessToken(
+    val id: String,
+    val userId: String,
+    val role: Role,
+    val createTime: LocalDateTime,
+    val expiryTime: LocalDateTime,
+){
+    fun toOAuth2AccessToken() = OAuth2AccessToken(
+        OAuth2AccessToken.TokenType.BEARER,
+        id,
+        createTime.toInstant(ZoneOffset.UTC),
+        expiryTime.toInstant(ZoneOffset.UTC)
+    )
+}
+
+data class RefreshToken(
+    val id: String,
+    val userId: String,
+    val role: Role,
+    val accessTokenId: String,
+    val createTime: LocalDateTime,
+    val expiryTime: LocalDateTime,
+)
+```
+
+## 4.6 expiry policies
+
+### 4.6.1 application.yml
+
+```
+auth-token:
+  expiry-policies:
+    - role: Admin
+      access-token: 5D
+      refresh-token: 30D
+    - role: Custom
+      access-token: 7D
+      refresh-token: 365D
+```
+
+> 1. 映射关系
+>    - application.yml `access-token: 7D`
+>    - @ConfigurationProperties `accessToken: Duration`
+> 2. 解析规则 https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html#parse-java.lang.CharSequence-
+> 3. 根据规则，解析过程
+>    - `7D` to `PT7D`
+>    - `PT7D` to `Duration.ofDays(7)`
+>
+> ![image-20210220141807254](/image-20210220141807254.png)
+
+### 4.6.2 Config
+
+```
+@Component
+@ConfigurationProperties("auth-token")
+class AuthTokenProperties {
+    lateinit var expiryPolicies: List<ExpiryPolicy>
+}
+
+class ExpiryPolicy {
+    lateinit var role: Role
+    lateinit var accessToken: Duration
+    lateinit var refreshToken: Duration
+}
+```
+
+## 4.7 Sign in
+
+### 4.7.1 redis desktop manager
+
+```
+brew install another-redis-desktop-manager --cask
+```
+
+### 4.7.2 Models
+
+![image-20210225100553302](/image-20210225100553302.png)
 
 
 
-## 6.2 error
+### 4.7.3 Flow Chart
+
+![Screen Shot 2021-02-26 at 12.24.21 PM](/Screen%20Shot%202021-02-26%20at%2012.24.21%20PM.png)
+
+### 4.7.4 Generate Token
+
+```
+@MessageMapping(API.Generate_Token)
+    suspend fun generateToken(request: GenerateTokenRequest): UserAndToken {
+        clientService.verify(request.client, API.Generate_Token)
+
+        authUserService.save(request.user)
+
+        clearCache(request.user.id)
+
+        val accessTokenId = UUID.randomUUID().toString()
+        val refreshTokenId = UUID.randomUUID().toString()
+
+        return coroutineScope {
+            val accessToken = async { accessTokenService.save(request.user.id, request.user.findRole(), accessTokenId) }
+            val refreshToken = async { refreshTokenService.save(request.user.id, request.user.findRole(), refreshTokenId) }
+            launch {
+                relationService.save(request.user.id, request.user.findRole(), accessTokenId, refreshTokenId)
+            }
+
+            UserAndToken(
+                request.user,
+                accessToken.await(),
+                refreshToken.await(),
+            )
+        }
+    }
+```
+
+
+
+# 5 并发测试
+
+kotlin coroutines，多个suspend嵌套，且，执行多个异步function。每个function都从上下文获取token是否会出错？
+
+## 5.1 api
+
+> 方法返回值应该是Unit，但是，使用rsc client测试时会报错，是rsocket与kotlin coroutines结合地有问题，官网参考资料：
+>
+> https://github.com/spring-projects/spring-framework/issues/23866
+>
+> 这个BUG不是本次测试的重点，所以，加个返回值“ok”
+
+```
+package org.study.account.controller
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.reactive.awaitFirst
+import org.slf4j.LoggerFactory
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.core.context.ReactiveSecurityContextHolder
+import org.springframework.security.oauth2.core.OAuth2AccessToken
+import org.springframework.stereotype.Controller
+import org.study.account.model.Custom
+import org.study.account.service.UserService
+import org.study.account.validation.validator.ArgumentValidator
+import org.study.common.config.BusinessException
+import org.study.common.config.GlobalExceptionHandler
+
+@Controller
+class UserController(
+    val userService: UserService,
+    val validator: ArgumentValidator,
+    override val mapper: ObjectMapper
+) : GlobalExceptionHandler(mapper) {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    @MessageMapping("create.the.user")
+    suspend fun create(@AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom,
+                       request: Custom.CreateRequest):String {
+        validator.validate(request)
+
+        log.info("operator `{}` create a user, request parameters: {}", operator.username, request)
+        a(operator.username)
+        return "ok"
+//        throw BusinessException("custom unknown exception")
+//        userService.create(validatedRequest.toEntity())
+    }
+    suspend fun fetchToken():String = ReactiveSecurityContextHolder.getContext().map {
+        (it.authentication.credentials as OAuth2AccessToken).tokenValue
+    }.awaitFirst()
+
+    suspend fun a(username: String) {
+        delay(100)
+        log.info("--a-- $username -- ${fetchToken()}")
+        b(username)
+        coroutineScope {
+            launch {
+                c(username)
+                d(username)
+            }
+            launch{
+                e(username)
+            }
+        }
+    }
+    suspend fun b(username: String) {
+        delay(100)
+        log.info("--b-- $username --  ${fetchToken()}")
+    }
+    suspend fun c(username: String) {
+        delay(100)
+        log.info("--c-- $username --  ${fetchToken()}")
+    }
+    suspend fun d(username: String) {
+        delay(100)
+        log.info("--d-- $username --  ${fetchToken()}")
+    }
+    suspend fun e(username: String) {
+        delay(100)
+        log.info("--e-- $username --  ${fetchToken()}")
+    }
+}
+```
+
+
+
+## 5.2 安装rsc
+
+```
+brew install making/tap/rsc
+```
+
+## 5.3 并发执行command
+
+```
+repeat(100){
+            log.info("""rsc --request --debug  --authBearer "$it" --data '{"username":"$it","age":18,"gender":"Male","phone":{"countryCode":"+1","number":"7785368920"},"legs":2,"ageBracket":"Adolescent"}' --route create.the.user tcp://localhost:7000 &""")
+        }
+```
+
+## 5.4 测试结果
+
+通过
+
+
+
+# 6 Refresh Token
+
+
+
+# 7 Exception
+
+## 7.1 expired
+
+### 7.1.1 AccessToken
+
+### 7.1.2 RefreshToken
+
+
+
+## 7.2 error
 
 error AccessToken/RefreshToken
+
+
+
+
 
 
 

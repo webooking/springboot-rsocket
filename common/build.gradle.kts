@@ -1,9 +1,7 @@
-@file:Suppress("SpellCheckingInspection")
-
 plugins {
     idea
     `maven-publish`
-    kotlin("jvm") version "1.4.21"
+    kotlin("jvm") version "1.4.31"
 }
 
 idea {
@@ -14,7 +12,7 @@ idea {
 }
 
 group = "org.study"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()

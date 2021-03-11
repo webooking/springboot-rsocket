@@ -6,7 +6,7 @@ import java.util.Collections
 
 object RandomPasswordGenerator {
     @Suppress("SpellCheckingInspection")
-    private const val template = "!#$%&()*+{|}~./:;<=>?@[]^_`012346789ABCDEFGHIJKLMNOPQRSTVWXYZabcdefghijklmnopqrstuvwxyz"
+    private const val template = "!#%&()*+{|}~./:;<=>?@[]^_`012346789ABCDEFGHIJKLMNOPQRSTVWXYZabcdefghijklmnopqrstuvwxyz"
     private val random = SecureRandom()
 
     fun generate(): String {

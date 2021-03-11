@@ -24,14 +24,6 @@ import java.time.Instant
 @EnableReactiveMethodSecurity
 class RSocketSecurityConfig {
     @Bean
-    fun mapReactiveUserDetailsService(): MapReactiveUserDetailsService {
-        return MapReactiveUserDetailsService(
-            User.withUsername("user").password("user").roles("USER").build(),
-            User.withUsername("admin").password("admin").roles("USER").build()
-        )
-    }
-
-    @Bean
     fun messageHandler(strategies: RSocketStrategies) = RSocketMessageHandler().apply {
         argumentResolverConfigurer.addCustomResolver(AuthenticationPrincipalArgumentResolver())
         rSocketStrategies = strategies
@@ -50,7 +42,7 @@ class RSocketSecurityConfig {
                     val accessToken = authentication.name
                     val user = Custom(
                         "user001",
-                        "user123456",
+                        accessToken,
                         "1374567890",
                         "yuri@qq.com"
                     ).toAuthUser()

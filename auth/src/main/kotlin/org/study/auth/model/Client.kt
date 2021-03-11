@@ -8,14 +8,14 @@ data class Client(
     val id: String = UUID.randomUUID().toString(),
     val secret: String = RandomPasswordGenerator.generate(),
     val apiList: List<String> = listOf(
-        API.GET_AUTHENTICATION,
+        API.Get_Authentication,
     )
 )
 
 object API {
-    const val GENERATE_TOKEN = "auth.generate.token"
-    const val DELETE_TOKEN = "auth.delete.token"
-    const val GET_AUTHENTICATION = "auth.get.authentication"
-    const val UPDATE_AUTHENTICATION = "auth.update.authentication"
-    const val REFRESH_TOKEN = "auth.refresh.token"
+    const val Generate_Token = "auth.generate.token"
+    const val Delete_Token = "auth.delete.token"
+    const val Get_Authentication = "auth.get.authentication"
+    const val Update_Authentication = "auth.update.authentication"
+    const val Refresh_Token = "auth.refresh.token"
 }

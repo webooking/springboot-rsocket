@@ -4,3 +4,12 @@ spring:
   redis:
     host: localhost
     port: 6379
+
+auth-token:
+  expiry-policies:
+    - role: Admin
+      access-token: 7D
+      refresh-token: 30D
+    - role: Custom
+      access-token: 7D
+      refresh-token: 365D

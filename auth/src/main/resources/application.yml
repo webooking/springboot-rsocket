@@ -4,3 +4,4 @@ spring:
   rsocket:
     server:
       port: 7001
+

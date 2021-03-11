@@ -2,11 +2,11 @@
 
 plugins {
     idea
-    id("org.springframework.boot") version "2.4.2"
+    id("org.springframework.boot") version "2.4.3"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
 
-    kotlin("jvm") version "1.4.21"
-    kotlin("plugin.spring") version "1.4.21"
+    kotlin("jvm") version "1.4.31"
+    kotlin("plugin.spring") version "1.4.31"
 }
 
 idea {
@@ -25,7 +25,7 @@ repositories {
 }
 
 dependencies {
-    val kotestVersion = "4.4.0.RC2"
+    val kotestVersion = "4.4.3"
     val springmockkVersion = "3.0.1"
     val commonVersion = "1.0.0"
 
@@ -36,6 +36,15 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     implementation("org.study:common:$commonVersion")
+
+    implementation("org.springframework.security:spring-security-oauth2-resource-server"){
+        exclude(group = "org.springframework")
+
+        listOf("spring-security-web").forEach {
+            exclude(module = it)
+        }
+    }
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
 
