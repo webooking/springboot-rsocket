@@ -28,12 +28,11 @@ class UserController(
 
     @MessageMapping("create.the.user")
     suspend fun create(@AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom,
-                       request: Custom.CreateRequest):String {
+                       request: Custom.CreateRequest) {
         validator.validate(request)
 
         log.info("operator `{}` create a user, request parameters: {}", operator.username, request)
         a(operator.username)
-        return "ok"
 //        throw BusinessException("custom unknown exception")
 //        userService.create(validatedRequest.toEntity())
     }

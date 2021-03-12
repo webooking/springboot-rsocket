@@ -1157,13 +1157,7 @@ brew install another-redis-desktop-manager --cask
 
 kotlin coroutines，多个suspend嵌套，且，执行多个异步function。每个function都从上下文获取token是否会出错？
 
-## 5.1 api
-
-> 方法返回值应该是Unit，但是，使用rsc client测试时会报错，是rsocket与kotlin coroutines结合地有问题，官网参考资料：
->
-> https://github.com/spring-projects/spring-framework/issues/23866
->
-> 这个BUG不是本次测试的重点，所以，加个返回值“ok”
+## 5.1 Controller
 
 ```
 package org.study.account.controller
@@ -1195,15 +1189,13 @@ class UserController(
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @MessageMapping("create.the.user")
-    suspend fun create(@AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom,
-                       request: Custom.CreateRequest):String {
+    suspend fun create(
+       @AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom,
+       request: Custom.CreateRequest) {
         validator.validate(request)
 
         log.info("operator `{}` create a user, request parameters: {}", operator.username, request)
         a(operator.username)
-        return "ok"
-//        throw BusinessException("custom unknown exception")
-//        userService.create(validatedRequest.toEntity())
     }
     suspend fun fetchToken():String = ReactiveSecurityContextHolder.getContext().map {
         (it.authentication.credentials as OAuth2AccessToken).tokenValue
@@ -1244,25 +1236,61 @@ class UserController(
 
 
 
-## 5.2 安装rsc
+## 5.2 Testing
 
 ```
-brew install making/tap/rsc
-```
+package org.study.account
 
-## 5.3 并发执行command
+import io.kotest.core.spec.style.StringSpec
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.reactive.awaitFirst
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import org.slf4j.LoggerFactory
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.messaging.rsocket.RSocketRequester
+import org.springframework.security.rsocket.metadata.BearerTokenMetadata
+import org.study.account.config.RSocketConfig
+import org.study.account.model.Custom
+import org.study.account.model.Gender
+import org.study.account.model.Phone
+import reactor.kotlin.test.test
 
-```
-repeat(100){
-            log.info("""rsc --request --debug  --authBearer "$it" --data '{"username":"$it","age":18,"gender":"Male","phone":{"countryCode":"+1","number":"7785368920"},"legs":2,"ageBracket":"Adolescent"}' --route create.the.user tcp://localhost:7000 &""")
+@SpringBootTest
+class CRUDSpec(val requester: RSocketRequester) : StringSpec({
+    "create the user"{
+        repeat(100) { index ->
+            launch {
+                createUser(requester, "10000${index}")
+            }
         }
+    }
+}) {
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+
+suspend fun createUser(requester: RSocketRequester, tokenValue: String): Void? = requester
+    .route("create.the.user")
+    .metadata(BearerTokenMetadata(tokenValue), RSocketConfig.MIME_TYPE)
+    .data(
+        buildUser(tokenValue)
+    )
+    .retrieveMono(Void::class.java).awaitFirstOrNull()
+
+
+private fun buildUser(tokenValue: String) = Custom.CreateRequest(
+    username = tokenValue,
+    age = 18,
+    gender = Gender.Male,
+    phone = Phone(
+        countryCode = "+1",
+        number = "7785368920"
+    ),
+    legs = 2, //腿的个数必须是偶数
+    ageBracket = "Adolescent"
+)
 ```
-
-## 5.4 测试结果
-
-通过
-
-
 
 # 6 Refresh Token
 
