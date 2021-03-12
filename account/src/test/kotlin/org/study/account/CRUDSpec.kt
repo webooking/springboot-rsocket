@@ -23,11 +23,6 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
             }
         }
     }
-    "repeat"{
-        repeat(100) {
-            log.info("""rsc --fnf --debug  --authBearer "$it" --data '{"username":"$it","age":18,"gender":"Male","phone":{"countryCode":"+1","number":"7785368920"},"legs":2,"ageBracket":"Adolescent"}' --route create.the.user tcp://localhost:7000 &""")
-        }
-    }
 }) {
     companion object {
         private val log = LoggerFactory.getLogger(this::class.java)
