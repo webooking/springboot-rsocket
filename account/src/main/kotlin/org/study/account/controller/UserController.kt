@@ -7,36 +7,60 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
+import org.springframework.context.MessageSource
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.stereotype.Controller
+import org.springframework.validation.annotation.Validated
 import org.study.account.model.Custom
+import org.study.account.model.auth.AuthUser
 import org.study.account.service.UserService
 import org.study.account.validation.validator.ArgumentValidator
 import org.study.common.config.BusinessException
 import org.study.common.config.GlobalExceptionHandler
+import java.util.*
+import javax.validation.Valid
 
 @Controller
 class UserController(
     val userService: UserService,
     val validator: ArgumentValidator,
-    override val mapper: ObjectMapper
+    override val mapper: ObjectMapper,
+    val messageSource: MessageSource
 ) : GlobalExceptionHandler(mapper) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    @MessageMapping("create.the.user")
-    suspend fun create(@AuthenticationPrincipal(expression = "custom") operator: org.study.account.model.auth.Custom,
-                       request: Custom.CreateRequest) {
-        validator.validate(request)
+    @MessageMapping("singIn")
+    suspend fun singIn() {
 
-        log.info("operator `{}` create a user, request parameters: {}", operator.username, request)
+    }
+
+    @MessageMapping("create.the.user")
+    suspend fun create(
+        @AuthenticationPrincipal(expression = "custom") user: org.study.account.model.auth.Custom,
+        request: Custom.CreateRequest
+    ) {
+        log.info(
+            "`{}` create a user, request parameters: {}, message: {}",
+            user.username,
+            request,
+            messageSource.getMessage("custom.error", null, ReactiveSecurityContextHolder.getContext().map {
+                (it.authentication.principal as AuthUser).getLocale()
+            }.awaitFirst())
+        )
+        validator.validate(Locale(user.language), request)
+
+        /*
         a(operator.username)
-//        throw BusinessException("custom unknown exception")
+        throw BusinessException(messageSource.getMessage("custom.error", null, ReactiveSecurityContextHolder.getContext().map {
+            (it.authentication.principal as AuthUser).getLocale()
+        }.awaitFirst()))*/
 //        userService.create(validatedRequest.toEntity())
     }
-    suspend fun fetchToken():String = ReactiveSecurityContextHolder.getContext().map {
+
+    suspend fun fetchToken(): String = ReactiveSecurityContextHolder.getContext().map {
         (it.authentication.credentials as OAuth2AccessToken).tokenValue
     }.awaitFirst()
 
@@ -49,23 +73,27 @@ class UserController(
                 c(username)
                 d(username)
             }
-            launch{
+            launch {
                 e(username)
             }
         }
     }
+
     suspend fun b(username: String) {
         delay(100)
         log.info("--b-- $username --  ${fetchToken()}")
     }
+
     suspend fun c(username: String) {
         delay(100)
         log.info("--c-- $username --  ${fetchToken()}")
     }
+
     suspend fun d(username: String) {
         delay(100)
         log.info("--d-- $username --  ${fetchToken()}")
     }
+
     suspend fun e(username: String) {
         delay(100)
         log.info("--e-- $username --  ${fetchToken()}")

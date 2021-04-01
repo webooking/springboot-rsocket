@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
 @MustBeDocumented
 @Constraint(validatedBy = [OddValidator::class])
 annotation class Odd(
-    val message: String = "腿的个数必须是偶数",
+    val message: String = "{validate.leg}",
     val groups: Array<KClass<*>> = [],
     val payload: Array<KClass<out Payload>> = []
 ) {

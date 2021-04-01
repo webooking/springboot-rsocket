@@ -33,7 +33,7 @@ class RSocketSecurityConfig {
     fun authorization(security: RSocketSecurity): PayloadSocketAcceptorInterceptor {
         security.authorizePayload { authorize: AuthorizePayloadsSpec ->
             authorize
-                .route("signin").permitAll()
+                .route("signIn").permitAll()
                 .anyRequest().authenticated()
                 .anyExchange().permitAll()
         }
@@ -44,7 +44,12 @@ class RSocketSecurityConfig {
                         "user001",
                         accessToken,
                         "1374567890",
-                        "yuri@qq.com"
+                        "yuri@qq.com",
+                        /*when (accessToken.toInt() % 2 == 0) {
+                            true -> "zh_CN"
+                            else -> "en_US"
+                        },*/
+                        "en_US",
                     ).toAuthUser()
 
                     Mono.just(

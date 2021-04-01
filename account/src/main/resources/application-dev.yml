@@ -19,3 +19,8 @@ logging:
     org:
       springframework:
         r2dbc: DEBUG
+
+service:
+  auth:
+    host: localhost
+    port: 7001
