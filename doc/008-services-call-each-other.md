@@ -113,7 +113,113 @@ class UserServiceSpec : StringSpec({
 
 
 
-## 3.1 How to continue a suspend function in a dynamic proxy in the same coroutine?
+## 3.2 How to continue a suspend function in a dynamic proxy in the same coroutine?
+
+```
+suspend fun a(){
+	proxy(suspend b())
+}
+```
+
+```
+package org.study.feign.proxy
+
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
+import kotlin.coroutines.Continuation
+
+typealias SuspendInvoker = suspend (method: Method, arguments: List<Any?>) -> Any?
+
+private interface SuspendFunction {
+    suspend fun invoke(): Any?
+}
+
+private val SuspendRemover = SuspendFunction::class.java.methods[0]
+
+@Suppress("UNCHECKED_CAST")
+fun <C : Any> proxy(contract: Class<C>, invoker: SuspendInvoker): C =
+    Proxy.newProxyInstance(contract.classLoader, arrayOf(contract)) { _, method, arguments ->
+        val continuation = arguments.last() as Continuation<*>
+        val argumentsWithoutContinuation = arguments.take(arguments.size - 1)
+        SuspendRemover.invoke(object : SuspendFunction {
+            override suspend fun invoke() = invoker(method, argumentsWithoutContinuation)
+        }, continuation)
+    } as C
+```
+
+
+
+```
+interface UserService {
+    suspend fun sayHello(name: String): String
+    suspend fun others(): Unit
+}
+
+package org.study.feign
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
+import org.study.feign.proxy.proxy
+
+class UserServiceSpec : StringSpec({
+    "jdk dynamic proxy"{
+        val greeting = "Hello Tom!"
+
+        val instance = proxy(UserService::class.java){method, args ->
+            log.info("Invoked method: {}, args: {}", method.name, args)
+
+            if ("sayHello" == method.name) {
+                log.info("method: {}, return String: {}", method.name, greeting)
+                greeting
+            } else {
+
+            }
+        }
+
+
+        instance.others().shouldBe(Unit)
+
+        val message = instance.sayHello("yuri")
+
+        message.shouldBe(greeting)
+    }
+    "launch"{
+        val greeting = "Hello Tom!"
+
+        val instance = proxy(UserService::class.java){method, args ->
+            delay(1000)
+            log.info("Invoked method: {}, args: {}", method.name, args)
+
+            if ("sayHello" == method.name) {
+                log.info("method: {}, return String: {}", method.name, greeting)
+                greeting
+            } else {
+
+            }
+        }
+
+        launch {
+            instance.others().shouldBe(Unit)
+        }
+        launch {
+            val message = instance.sayHello("yuri")
+
+            message.shouldBe(greeting)
+        }
+    }
+}) {
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
+```
+
+
+
+
 
 
 

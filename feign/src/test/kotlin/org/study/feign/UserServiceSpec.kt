@@ -1,19 +1,17 @@
 package org.study.feign
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import io.mockk.verify
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
-import java.lang.reflect.InvocationHandler
-import java.lang.reflect.Method
-import java.lang.reflect.Proxy
+import org.study.feign.proxy.proxy
 
 class UserServiceSpec : StringSpec({
     "jdk dynamic proxy"{
         val greeting = "Hello Tom!"
 
-        val handler = InvocationHandler { _, method, args ->
+        val instance = proxy(UserService::class.java){method, args ->
             log.info("Invoked method: {}, args: {}", method.name, args)
 
             if ("sayHello" == method.name) {
@@ -23,11 +21,6 @@ class UserServiceSpec : StringSpec({
 
             }
         }
-        val instance = Proxy.newProxyInstance(
-            this::class.java.classLoader,
-            arrayOf(UserService::class.java),
-            handler
-        ) as UserService
 
 
         instance.others().shouldBe(Unit)
@@ -35,6 +28,30 @@ class UserServiceSpec : StringSpec({
         val message = instance.sayHello("yuri")
 
         message.shouldBe(greeting)
+    }
+    "launch"{
+        val greeting = "Hello Tom!"
+
+        val instance = proxy(UserService::class.java){method, args ->
+            delay(1000)
+            log.info("Invoked method: {}, args: {}", method.name, args)
+
+            if ("sayHello" == method.name) {
+                log.info("method: {}, return String: {}", method.name, greeting)
+                greeting
+            } else {
+
+            }
+        }
+
+        launch {
+            instance.others().shouldBe(Unit)
+        }
+        launch {
+            val message = instance.sayHello("yuri")
+
+            message.shouldBe(greeting)
+        }
     }
 }) {
     companion object {

@@ -1,6 +1,6 @@
 package org.study.feign
 
 interface UserService {
-    fun sayHello(name: String): String
-    fun others(): Unit
+    suspend fun sayHello(name: String): String
+    suspend fun others(): Unit
 }
