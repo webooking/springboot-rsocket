@@ -1,6 +1,6 @@
 package org.study.feign.annotation
 
-@Target(AnnotationTarget.FUNCTION)
 @Retention
+@Target(AnnotationTarget.CLASS)
 @MustBeDocumented
-annotation class Anonymous
+annotation class RSocketClient

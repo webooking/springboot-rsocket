@@ -219,6 +219,154 @@ class UserServiceSpec : StringSpec({
 
 
 
+## 3.3 Manually inject objects into the Spring container
+
+1. 创建bean
+2. 注入到spring 容器 https://www.jianshu.com/p/07ddd99cb58b
+3. 扫描源码，判断需要实例化哪些接口？
+   1). 为接口添加特定注解 `@RSocketClient`
+   2). 判断方法是否有注解 `@MessageMapping`
+4. 使用自定义注解 + `@Import`，将整个业务逻辑嵌入spring 容器中
+
+### 3.3.1 dynamic proxy bean
+
+```
+val greeting = "Hello Tom!"
+
+proxy(UserService::class.java) { method, args ->
+    delay(1000)
+    log.info("Invoked method: {}, args: {}", method.name, args)
+
+    if ("sayHello" == method.name) {
+        log.info("method: {}, return String: {}", method.name, greeting)
+        greeting
+    } else {
+
+    }
+}
+```
+
+### 3.3.2 inject into spring container
+
+```
+BeanFactoryPostProcessor#postProcessBeanFactory(ConfigurableListableBeanFactory) 
+
+@Suppress("ControlFlowWithEmptyBody")
+beanFactory.registerSingleton(
+  metadata.className, 
+  proxy(UserService::class.java
+) { method, args ->
+    delay(1000)
+    log.info("Invoked method: {}, args: {}", method.name, args)
+
+    if ("sayHello" == method.name) {
+        log.info("method: {}, return String: {}", method.name, greeting)
+        greeting
+    } else {
+
+    }
+})
+```
+
+
+
+### 3.3.3 client interfaces
+
+```
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.study.feign.annotation.Anonymous
+import org.study.feign.annotation.RSocketClient
+
+@RSocketClient
+interface UserService {
+
+    @Anonymous
+    @MessageMapping("say.hello")
+    suspend fun sayHello(name: String): String
+
+    @MessageMapping("others")
+    suspend fun others(): Unit
+}
+
+```
+
+
+
+### 3.3.4 scanner client interfaces
+
+```
+object : ClassPathScanningCandidateComponentProvider(false, environment!!) {
+        override fun isCandidateComponent(metadata: AnnotatedBeanDefinition): Boolean =
+            metadata.metadata.isIndependent && !metadata.metadata.isAnnotation
+    }.apply {
+        addIncludeFilter(AnnotationTypeFilter(RSocketClient::class.java))
+        resourceLoader = resourceLoader
+        
+        findCandidateComponents("org.study.feign.client")
+            .filterIsInstance(AnnotatedBeanDefinition::class.java)
+            .forEach {
+                val metadata = it.metadata
+                validateMethods(metadata)
+                registerRSocketClient(metadata, beanFactory)
+            }
+    }
+```
+
+
+
+### 3.3.5 validate methods
+
+```
+private fun validateMethods(annotationMetadata: AnnotationMetadata) {
+        Assert.isTrue(
+            annotationMetadata.isInterface,
+            "the @${RSocketClient::class.java.name} annotation must be used only on an interface"
+        )
+        val clazz = Class.forName(annotationMetadata.className)
+        ReflectionUtils.doWithMethods(clazz) { method: Method ->
+            if (log.isDebugEnabled) {
+                log.debug("validating ${clazz.name}#${method.name}")
+            }
+            val annotation = method.getAnnotation(MessageMapping::class.java)
+            Assert.notNull(
+                annotation,
+                "you must use the @${MessageMapping::class.java.name} annotation on every method on ${clazz.name}."
+            )
+        }
+    }
+```
+
+
+
+### 3.3.6 custom annotation & @Import
+
+```
+import org.springframework.context.annotation.Import
+import org.study.feign.core.RSocketClientsRegistrar
+import kotlin.reflect.KClass
+
+@Retention
+@Target(AnnotationTarget.CLASS)
+@MustBeDocumented
+@Import(RSocketClientsRegistrar::class)
+annotation class EnableRSocketClients(
+    vararg val value: String = [],
+    val basePackages: Array<String> = [],
+    val basePackageClasses: Array<KClass<*>> = []
+)
+
+```
+
+
+
+### 3.3.7 testing
+
+```
+@SpringBootApplication
+@EnableRSocketClients
+class App
+```
+
 
 
 

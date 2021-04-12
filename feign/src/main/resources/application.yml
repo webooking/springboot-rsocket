@@ -1,0 +1,6 @@
+spring:
+  profiles:
+    active: dev
+  rsocket:
+    server:
+      port: 7000
