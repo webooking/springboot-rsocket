@@ -367,6 +367,10 @@ annotation class EnableRSocketClients(
 class App
 ```
 
+## 3.4 rsocket client
+
+
+
 
 
 

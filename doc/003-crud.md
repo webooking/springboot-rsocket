@@ -39,7 +39,7 @@ View Object
 
 ```
 1. 下载postgresql镜像
-docker pull postgres:12.5-alpine
+docker pull postgres:13.2-alpine
 
 2. 查看镜像文件
 docker images --filter "reference=postgres"
@@ -47,7 +47,7 @@ REPOSITORY   TAG           IMAGE ID       CREATED      SIZE
 postgres     12.5-alpine   e07060185412   3 days ago   158MB
 
 3. 使用镜像
-docker container run --name postgres -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 postgres:12.5-alpine
+docker container run --name postgres -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 postgres:13.2-alpine
 
 ```
 
