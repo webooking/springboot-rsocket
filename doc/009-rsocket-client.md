@@ -125,6 +125,52 @@ class RSocketClientsRegistrar : ImportBeanDefinitionRegistrar {
 }
 ```
 
+# 2.3 初始化bean，并注入context
+
+### 2.3.1 RootBeanDefinition
+
+RootBeanDefinition，注入一个单例
+
+```
+import org.slf4j.LoggerFactory
+
+class RSocketClientBuilder {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    constructor(){
+        log.info("init class RSocketClientBuilder")
+    }
+}
+```
+
+```
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar
+
+class RSocketClientsRegistrar : ImportBeanDefinitionRegistrar {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    override fun registerBeanDefinitions(
+      importingClassMetadata: AnnotationMetadata, 
+      registry: BeanDefinitionRegistry
+    ) {
+        if(!registry.containsBeanDefinition("rSocketClientBuilder")){
+            log.info("has not a bean rSocketClientBuilder")
+            registry.registerBeanDefinition(
+              "rSocketClientBuilder",      
+              RootBeanDefinition("org.study.feign.util.RSocketClientBuilder")
+            )
+        }
+        log.info("Does have bean rSocketClientBuilder? ${registry.containsBeanDefinition("rSocketClientBuilder")}")
+        
+        super.registerBeanDefinitions(importingClassMetadata, registry)
+    }
+```
+
+
+
 
 
 
