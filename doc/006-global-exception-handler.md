@@ -323,12 +323,15 @@ docker container exec -it nexus bash
 4. 查看密码
 bash-4.4$ cat nexus-data/admin.password 
 07f716e1-9299-470e-bcfd-7764dd3732d4
+216077b5-0e47-4555-9159-b4c23fc5441e
 
 5. 访问网址 http://localhost:5433/
 用户名: admin
-密码: 07f716e1-9299-470e-bcfd-7764dd3732d4
+密码: 216077b5-0e47-4555-9159-b4c23fc5441e
 
 6. 修改登录密码（请记住密码）
+admin
+Yurilee1986.
 ```
 
 ### 5.3.2 create maven repository

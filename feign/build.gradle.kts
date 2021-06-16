@@ -1,8 +1,11 @@
 plugins {
+    kotlin("jvm") version "1.5.10"
     idea
     `maven-publish`
-    kotlin("jvm") version "1.4.31"
 }
+
+group = "org.study"
+version = "1.0.1"
 
 idea {
     module {
@@ -11,35 +14,31 @@ idea {
     }
 }
 
-group = "org.study"
-version = "1.0.1"
-
 repositories {
     mavenCentral()
 }
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.11.4")
-    implementation("io.rsocket:rsocket-core:1.1.0")
-    implementation("org.slf4j:slf4j-api:1.7.30")
-    implementation("org.springframework:spring-messaging:5.3.3")
-    implementation("jakarta.validation:jakarta.validation-api:2.0.2")
+    api("org.springframework:spring-context:5.2.7.RELEASE")
+    api("org.slf4j:slf4j-api:1.7.30")
 }
 
 tasks {
+    withType<Wrapper> {
+        distributionType = Wrapper.DistributionType.ALL
+        gradleVersion = "7.0.2"
+    }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions {
             freeCompilerArgs = listOf("-Xjsr305=strict")
             jvmTarget = "11"
         }
     }
-    withType<Wrapper> {
-        distributionType = Wrapper.DistributionType.ALL
-        gradleVersion = "6.8.1"
+    withType<Test> {
+        useJUnitPlatform()
     }
 }
-
 val sourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)
@@ -48,6 +47,7 @@ val sourcesJar by tasks.registering(Jar::class) {
 publishing {
     repositories {
         maven {
+            isAllowInsecureProtocol = true
             setUrl("http://localhost:5433/repository/rsocket")
             credentials {
                 username = "admin"

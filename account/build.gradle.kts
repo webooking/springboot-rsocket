@@ -30,6 +30,7 @@ dependencies {
     val validatorVersion = "6.2.0.Final"
     val commonVersion = "1.0.0"
 
+    implementation("org.study:feign:1.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 

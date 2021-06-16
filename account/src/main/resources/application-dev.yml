@@ -1,6 +1,6 @@
 spring:
   main:
-    lazy-initialization: true
+    lazy-initialization: false
   r2dbc:
     url: r2dbc:postgresql://127.0.0.1:5432/rsocket?currentSchema=account
     username: account
