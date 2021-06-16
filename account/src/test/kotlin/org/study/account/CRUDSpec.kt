@@ -23,6 +23,13 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
 //        }
         createUser(requester, "100001", log)
     }
+    "anonymous access api"{
+        requester
+            .route("signUp")
+            .retrieveMono(Void::class.java)
+            .test()
+            .verifyComplete()
+    }
 }) {
     companion object {
         private val log = LoggerFactory.getLogger(this::class.java)

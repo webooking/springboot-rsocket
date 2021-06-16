@@ -32,9 +32,9 @@ class UserController(
 ) : GlobalExceptionHandler(mapper) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    @MessageMapping("singIn")
-    suspend fun singIn() {
-
+    @MessageMapping("signUp")
+    suspend fun signUp() {
+        log.info("sign up")
     }
 
     @MessageMapping("create.the.user")

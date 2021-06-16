@@ -19,7 +19,7 @@ annotation class FeignClientMapping(
     vararg val classes: KClass<*>
 )
 
-@Target(AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
 @Retention
 @MustBeDocumented
 annotation class Anonymous

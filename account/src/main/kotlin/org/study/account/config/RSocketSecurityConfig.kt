@@ -33,7 +33,7 @@ class RSocketSecurityConfig {
     fun authorization(security: RSocketSecurity): PayloadSocketAcceptorInterceptor {
         security.authorizePayload { authorize: AuthorizePayloadsSpec ->
             authorize
-                .route("signIn").permitAll()
+                .route("signUp").permitAll()
                 .anyRequest().authenticated()
                 .anyExchange().permitAll()
         }

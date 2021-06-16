@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.study"
-version = "1.0.1"
+version = "1.0.7"
 
 idea {
     module {
@@ -20,8 +20,8 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    api("org.springframework:spring-context:5.2.7.RELEASE")
-    api("org.slf4j:slf4j-api:1.7.30")
+    implementation("org.springframework:spring-context:5.2.7.RELEASE")
+    implementation("org.slf4j:slf4j-api:1.7.30")
 }
 
 tasks {
