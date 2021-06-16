@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.study"
-version = "1.0.9"
+version = "1.0.1"
 
 idea {
     module {
@@ -21,6 +21,9 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.springframework:spring-context:5.2.7.RELEASE")
+    implementation("org.springframework:spring-messaging:5.3.4")
+    implementation("org.springframework.security:spring-security-rsocket:5.4.5")
+    implementation("org.springframework:spring-web:5.3.4")
     implementation("org.slf4j:slf4j-api:1.7.30")
 }
 

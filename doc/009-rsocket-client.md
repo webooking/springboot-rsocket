@@ -163,10 +163,72 @@ class RSocketClientsRegistrar : ImportBeanDefinitionRegistrar {
               RootBeanDefinition("org.study.feign.util.RSocketClientBuilder")
             )
         }
-        log.info("Does have bean rSocketClientBuilder? ${registry.containsBeanDefinition("rSocketClientBuilder")}")
+        log.info("Does have bean rSocketClientBuilder? ${
+         registry.containsBeanDefinition("rSocketClientBuilder")
+        }")
         
         super.registerBeanDefinitions(importingClassMetadata, registry)
     }
+```
+
+### 2.3.2 使用FactoryBean初始化RSocketStrategies
+
+默认没有`BearerTokenAuthenticationEncoder`，如果注册成功，可以从上下文获得
+
+```
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.http.codec.cbor.Jackson2CborDecoder
+import org.springframework.http.codec.cbor.Jackson2CborEncoder
+import org.springframework.messaging.rsocket.RSocketStrategies
+import org.springframework.security.rsocket.metadata.BearerTokenAuthenticationEncoder
+
+class RSocketStrategiesFactoryBean: FactoryBean<RSocketStrategies> {
+    override fun getObject(): RSocketStrategies = RSocketStrategies.builder()
+        .encoders {
+            it.add(BearerTokenAuthenticationEncoder())
+            it.add(Jackson2CborEncoder())
+        }
+        .decoders {
+            it.add(Jackson2CborDecoder())
+        }
+        .build()
+
+    override fun getObjectType(): Class<*> = RSocketStrategies::class.java
+}
+```
+
+```
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar
+import org.springframework.security.rsocket.metadata.BearerTokenAuthenticationEncoder
+import org.study.feign.util.RSocketClientBuilder
+import org.study.feign.util.RSocketStrategiesFactoryBean
+
+class RSocketClientsRegistrar : ImportBeanDefinitionRegistrar {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    override fun registerBeanDefinitions(
+      importingClassMetadata: AnnotationMetadata, 
+      registry: BeanDefinitionRegistry) {
+        if (!registry.containsBeanDefinition("rSocketStrategies")) {
+            registry.registerBeanDefinition("rSocketStrategies", 
+             RootBeanDefinition(RSocketStrategiesFactoryBean::class.java))
+        }
+
+        log.info("Does have bean rSocketStrategies? ${
+         (registry as DefaultListableBeanFactory)
+            .getBean(
+              org.springframework.messaging.rsocket.RSocketStrategies::class.java)
+            .encoders().map { it::class.java }
+            .contains(BearerTokenAuthenticationEncoder::class.java)
+         }")
+
+        super.registerBeanDefinitions(importingClassMetadata, registry)
+    }
+}
 ```
 
 
