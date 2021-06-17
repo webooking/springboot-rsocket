@@ -1,4 +1,4 @@
-package org.study.feign.util
+package org.study.feign.model.factory
 
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.http.codec.cbor.Jackson2CborDecoder

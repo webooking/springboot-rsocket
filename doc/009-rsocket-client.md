@@ -233,7 +233,47 @@ class RSocketClientsRegistrar : ImportBeanDefinitionRegistrar {
 
 
 
+### 2.3.3 创建`prototype`的`RSocketRequester.Builder`
 
+![prototyp](/prototyp.png)
+
+顺带还有一个问题：之前创建的moel都是没有参数的，现在，有属性咯！！！
+
+```
+registry.registerBeanDefinition(
+            "rSocketRequesterBuilder",
+            RootBeanDefinition(
+              RSocketRequesterBuilderFactoryBean::class.java, 
+              ConstructorArgumentValues().apply {
+                addGenericArgumentValue(
+                  (registry as DefaultListableBeanFactory)
+                   .getBean(RSocketStrategies::class.java)
+                )
+            }, null).apply {
+                scope = ConfigurableBeanFactory.SCOPE_PROTOTYPE
+            })
+```
+
+```
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.FactoryBean
+import org.springframework.messaging.rsocket.RSocketRequester
+import org.springframework.messaging.rsocket.RSocketStrategies
+
+class RSocketRequesterBuilderFactoryBean(private val strategies: RSocketStrategies) : FactoryBean<RSocketRequester.Builder> {
+    private val log = LoggerFactory.getLogger(this::class.java)
+
+    override fun getObject(): RSocketRequester.Builder{
+        val bean = RSocketRequester.builder().rsocketStrategies(strategies)
+        log.info("create RSocketRequester.Builder: $bean")
+        return bean
+    }
+
+    override fun getObjectType(): Class<*> = RSocketRequester.Builder::class.java
+
+    override fun isSingleton(): Boolean = false
+}
+```
 
 
 

@@ -2,6 +2,7 @@ package org.study.account
 
 import io.kotest.core.spec.style.StringSpec
 import io.rsocket.exceptions.CustomRSocketException
+import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.test.context.SpringBootTest
@@ -16,12 +17,12 @@ import reactor.kotlin.test.test
 @SpringBootTest
 class CRUDSpec(val requester: RSocketRequester) : StringSpec({
     "create the user"{
-//        repeat(100) { index ->
-//            launch {
-//                createUser(requester, "10000${index}")
-//            }
-//        }
-        createUser(requester, "100001", log)
+        repeat(10) { index ->
+            launch {
+                createUser(requester, "10000${index}", log)
+            }
+        }
+//        createUser(requester, "100001", log)
     }
     "anonymous access api"{
         requester
@@ -48,7 +49,7 @@ suspend fun createUser(requester: RSocketRequester, tokenValue: String, log: Log
         ex is CustomRSocketException
     }
     .verify()
-    //.awaitFirstOrNull()
+//.awaitFirstOrNull()
 
 
 private fun buildUser(tokenValue: String) = Custom.CreateRequest(

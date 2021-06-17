@@ -1,6 +1,7 @@
 package org.study.account
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.rsocket.RSocketRequesterAutoConfiguration
 import org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration
 import org.springframework.boot.runApplication
 import org.study.account.controller.AccountController
@@ -20,7 +21,7 @@ import java.util.*
     FeignClientMapping(
         name = "auth",
         host = "localhost",
-        port = 7002,
+        port = 7001,
         classes = [AccountController::class]
     ),
 )
