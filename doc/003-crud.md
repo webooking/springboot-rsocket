@@ -44,7 +44,7 @@ docker pull postgres:13.2-alpine
 2. 查看镜像文件
 docker images --filter "reference=postgres"
 REPOSITORY   TAG           IMAGE ID       CREATED      SIZE
-postgres     12.5-alpine   e07060185412   3 days ago   158MB
+postgres     13.2-alpine   e07060185412   3 days ago   160MB
 
 3. 使用镜像
 docker container run --name postgres -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 postgres:13.2-alpine
@@ -57,14 +57,14 @@ docker container run --name postgres -e POSTGRES_PASSWORD=mysecretpassword -d -p
 1. 查看正在运行的容器
 docker container ls -a
 CONTAINER ID   IMAGE                    STATUS          PORTS      NAMES
-487cb17f2e2a   postgres:12.5-alpine     Up 15 minutes   0.0.0.0:5432->5432/tcp   postgres
+487cb17f2e2a   postgres:13.2-alpine     Up 15 minutes   0.0.0.0:5432->5432/tcp   postgres
 
 2. 进入容器
 docker container exec -it postgres bash
 
 3. 进入默认用户postgres
 bash-5.1# psql -U postgres
-psql (12.5)
+psql (13.2)
 Type "help" for help.
 
 4. 查看数据库

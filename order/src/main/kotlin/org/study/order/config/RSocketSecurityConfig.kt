@@ -1,4 +1,4 @@
-package org.study.account.config
+package org.study.order.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -8,13 +8,11 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.rsocket.EnableRSocketSecurity
 import org.springframework.security.config.annotation.rsocket.RSocketSecurity
 import org.springframework.security.config.annotation.rsocket.RSocketSecurity.AuthorizePayloadsSpec
-import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
-import org.springframework.security.core.userdetails.User
 import org.springframework.security.messaging.handler.invocation.reactive.AuthenticationPrincipalArgumentResolver
 import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication
 import org.springframework.security.rsocket.core.PayloadSocketAcceptorInterceptor
-import org.study.account.model.auth.Custom
+import org.study.order.model.auth.Custom
 import reactor.core.publisher.Mono
 import java.time.Instant
 
@@ -34,8 +32,7 @@ class RSocketSecurityConfig {
         security.authorizePayload { authorize: AuthorizePayloadsSpec ->
             authorize
                 .route("signUp").permitAll()
-                .route("stream").permitAll()
-                .route("find.all").permitAll()
+//                .route("stream").permitAll()
                 .anyRequest().authenticated()
                 .anyExchange().permitAll()
         }
@@ -47,10 +44,6 @@ class RSocketSecurityConfig {
                         accessToken,
                         "1374567890",
                         "yuri@qq.com",
-                        /*when (accessToken.toInt() % 2 == 0) {
-                            true -> "zh_CN"
-                            else -> "en_US"
-                        },*/
                         "en_US",
                     ).toAuthUser()
 

@@ -1,4 +1,4 @@
-package org.study.feign.model.factory
+package org.study.feign.factory
 
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.messaging.rsocket.RSocketRequester

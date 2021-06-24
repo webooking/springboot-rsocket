@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.reactive.awaitFirst
 import org.slf4j.LoggerFactory
@@ -13,15 +14,14 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.stereotype.Controller
-import org.springframework.validation.annotation.Validated
 import org.study.account.model.Custom
+import org.study.account.model.Gender
+import org.study.account.model.Phone
 import org.study.account.model.auth.AuthUser
 import org.study.account.service.UserService
 import org.study.account.validation.validator.ArgumentValidator
-import org.study.common.config.BusinessException
 import org.study.common.config.GlobalExceptionHandler
 import java.util.*
-import javax.validation.Valid
 
 @Controller
 class UserController(
@@ -33,9 +33,36 @@ class UserController(
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @MessageMapping("signUp")
-    suspend fun signUp() {
+    suspend fun signUp(): Unit {
         log.info("sign up")
+//        return "greet"
     }
+
+    @MessageMapping("find.user")
+    suspend fun findUser(@AuthenticationPrincipal(expression = "custom") user: org.study.account.model.auth.Custom) = null
+
+    @MessageMapping("stream")
+    suspend fun receive(): Flow<Int> = flow {
+        (1..3).forEach {
+            log.info("current value: $it")
+            emit(it)
+        }
+    }
+
+    @MessageMapping("find.all")
+    suspend fun findAll2(): List<Custom.CreateRequest> = (1..10).map { buildUser("1000$it") }
+    private fun buildUser(tokenValue: String) = Custom.CreateRequest(
+        username = tokenValue,
+        age = 18,
+        gender = Gender.Male,
+        phone = Phone(
+            countryCode = "+1",
+            number = "7785368920"
+        ),
+        legs = 1, //腿的个数必须是偶数
+        ageBracket = "Adolescent",
+        hobbies = listOf("a", "b", "c")
+    )
 
     @MessageMapping("create.the.user")
     suspend fun create(

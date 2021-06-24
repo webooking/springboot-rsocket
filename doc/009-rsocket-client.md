@@ -275,11 +275,68 @@ class RSocketRequesterBuilderFactoryBean(private val strategies: RSocketStrategi
 }
 ```
 
+### 2.3.4 bean冲突
 
+`consumer`与`provider`交互，需要创建一个`RSocketRequester`;
 
+每多加一个`provider`，就需要一个`RSocketRequester`;
 
+测试本地`consumer`的接口，也需要创建一个`RSocketRequester`;
 
+如何避免这些`RSocketRequester`起冲突？
 
+答：给这些bean起不同的名字：
+
+- provider。 "${providerName}RSocketRequester"
+- consumer。"rSocketRequester"
+
+### 2.3.5 接收方法的返回值
+
+`kotlinx-coroutines-reactor`在`Mono<T>,Flux<T>`的基础上，做了扩展。对于kotlin更加友好，但是，参数类型改变后，意味着方法的返回值也比较特殊，`java`版的资料没有参考性了。那么，如何解析方法的返回值呢？
+
+答： 查看`spring-messaging`的源码，发现底层已经实现了。不过，是`private`的方法，直接改装下，调用即可
+
+1. 扩展`org.springframework.messaging.rsocket.RetrieveSpec`
+
+```
+<T> Mono<T> retrieveMono(ResolvableType dataType);
+<T> Flux<T> retrieveFlux(ResolvableType dataType);
+```
+
+2. 重写`org.springframework.messaging.rsocket.DefaultRSocketRequester`
+
+把对应的两个方法改为`public`的，且添加`@override`
+
+3. 业务代码
+
+```
+suspend fun build(method: Method, arguments: List<Any?>): Any? = 
+  withContext((arguments.last() as Continuation<*>).context) {
+   ...
+   
+   val returnType = method.kotlinFunction!!.returnType
+        if (returnType.toString().startsWith("kotlinx.coroutines.flow.Flow")) {
+            specWithData
+             .retrieveFlux<Any>(
+               ResolvableType
+                 .forMethodReturnType(method)
+                 .generics[0]
+              ).asFlow()
+        } else {
+            val type = ResolvableType.forMethodReturnType(method)
+            val mono = specWithData.retrieveMono<Any>(type)
+            if (type.rawClass == null || 
+                type.rawClass!! == Unit.javaClass || 
+                returnType.isMarkedNullable
+            ) {
+                mono.awaitFirstOrNull()
+            } else {
+                mono.awaitSingle()
+            }
+        }
+}
+    
+```
 
 
 

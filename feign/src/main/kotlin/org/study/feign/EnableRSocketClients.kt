@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package org.study.feign
 
 import org.springframework.context.annotation.Import
@@ -27,4 +29,12 @@ annotation class Anonymous
 @Target(AnnotationTarget.CLASS)
 @Retention
 @MustBeDocumented
-annotation class RSocketClient
+annotation class RSocketClient(
+    val value: String = ""
+)
+
+data class FeignClientMappingDto(
+    val host: String,
+    val port: Int,
+    @Suppress("ArrayInDataClass") val classes: Array<Class<*>>
+)

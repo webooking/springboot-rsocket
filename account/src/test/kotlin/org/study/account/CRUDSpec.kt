@@ -1,21 +1,32 @@
 package org.study.account
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.StringSpec
 import io.rsocket.exceptions.CustomRSocketException
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.collect
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.messaging.rsocket.RSocketRequester
+import org.springframework.messaging.rsocket.retrieveFlow
+import org.springframework.messaging.rsocket.retrieveMono
 import org.springframework.security.rsocket.metadata.BearerTokenMetadata
 import org.study.account.config.RSocketConfig
 import org.study.account.model.Custom
+import org.study.account.model.Custom.CreateRequest
 import org.study.account.model.Gender
 import org.study.account.model.Phone
 import reactor.kotlin.test.test
+import java.lang.reflect.ParameterizedType
 
 @SpringBootTest
-class CRUDSpec(val requester: RSocketRequester) : StringSpec({
+class CRUDSpec(val requester: RSocketRequester,val mapper:ObjectMapper) : StringSpec({
     "create the user"{
         repeat(10) { index ->
             launch {
@@ -30,6 +41,27 @@ class CRUDSpec(val requester: RSocketRequester) : StringSpec({
             .retrieveMono(Void::class.java)
             .test()
             .verifyComplete()
+    }
+    "stream"{
+        log.info(Int::class.java.toString())
+        requester
+            .route("stream")
+            .retrieveFlux(Int::class.java)
+            .asFlow()
+            .buffer(2)
+            .collect {
+                log.info("received ${it}")
+            }
+    }
+    "list"{
+        requester.route("find.all")
+            .retrieveMono(List::class.java)
+            .collect {
+                it.forEach { custom ->
+                    log.info((custom as Custom.CreateRequest).username)
+                }
+            }
+
     }
 }) {
     companion object {
@@ -52,7 +84,7 @@ suspend fun createUser(requester: RSocketRequester, tokenValue: String, log: Log
 //.awaitFirstOrNull()
 
 
-private fun buildUser(tokenValue: String) = Custom.CreateRequest(
+private fun buildUser(tokenValue: String) = CreateRequest(
     username = tokenValue,
     age = 18,
     gender = Gender.Male,

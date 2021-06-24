@@ -19,11 +19,13 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
+    implementation(kotlin("reflect"))
+    implementation("io.rsocket:rsocket-core:1.1.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.5.0")
+    implementation("org.springframework.security:spring-security-oauth2-core:5.5.0")
     implementation("org.springframework:spring-context:5.2.7.RELEASE")
     implementation("org.springframework:spring-messaging:5.3.4")
     implementation("org.springframework.security:spring-security-rsocket:5.4.5")
-    implementation("org.springframework:spring-web:5.3.4")
     implementation("org.slf4j:slf4j-api:1.7.30")
 }
 

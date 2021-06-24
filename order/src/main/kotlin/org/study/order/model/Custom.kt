@@ -1,50 +1,20 @@
-package org.study.account.model
+package org.study.order.model
 
-import org.springframework.data.annotation.Id
-import org.springframework.data.relational.core.mapping.Column
-import org.springframework.data.relational.core.mapping.Table
-import org.study.account.validation.constraints.AgeBracket
-import org.study.account.validation.constraints.Odd
 import java.time.LocalDateTime
-import java.util.*
-import javax.validation.Valid
-import javax.validation.constraints.Min
 
 enum class Gender {
     Male, Female, Neutral
 }
 
 sealed class Custom {
-    @AgeBracket
     data class CreateRequest(
         val username: String,
-        @get:Min(18) val age: Int,
+        val age: Int,
         val gender: Gender,
-        @get:Valid
         val phone: Phone,
-        @get:Odd
         val legs: Int,
         val ageBracket: String,
         val hobbies: List<String> = listOf("swimming", "basketball", "football")
-    ) : Custom() {
-        fun toEntity() = Entity(
-            id = UUID.randomUUID().toString(),
-            username = username,
-            age = age,
-            gender = gender.name,
-            version = 0L,
-        )
-    }
-
-    @Table("t_user")
-    data class Entity(
-        @Id val id: String,
-        @Column("username") val username: String,
-        @Column("age") val age: Int,
-        @Column("gender") val gender: String,
-        @Column("version") val version: Long,
-        @Column("create_time") val createTime: LocalDateTime? = null,
-        @Column("update_time") val updateTime: LocalDateTime? = null,
     ) : Custom()
 
     data class UpdateRequest(

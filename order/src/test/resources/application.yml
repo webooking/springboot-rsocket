@@ -1,0 +1,11 @@
+spring:
+  main:
+    lazy-initialization: true
+  rsocket:
+    server:
+      port: 7002
+
+logging:
+    org:
+      springframework:
+        r2dbc: DEBUG
